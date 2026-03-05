@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Recipe Manager",
-  description: "Discover, create, and manage your favorite recipes.",
+  title: "Recipe Management App",
+  description: "Discover, create and manage your favorite recipes.",
 };
 
 export default function RootLayout({

@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
 
     if (!token) {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/login";
       url.searchParams.set("error", "login_required");
       return NextResponse.redirect(url);
     }
@@ -23,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/manage/:path*"],
+  matcher: ["/manage", "/manage/:path*"],
 };

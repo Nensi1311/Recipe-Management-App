@@ -1,9 +1,27 @@
 import Link from "next/link";
 import { ChefHat, BookOpen, Star, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const resolvedParams = await searchParams;
+  const showError = resolvedParams.error === "login_required";
+
   return (
     <div className="min-h-screen">
+      {/* Error Banner */}
+      {showError && (
+        <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-3 text-center">
+          <p className="text-rose-400 font-medium">
+            Please login as a chef to access the management area. (Use the
+            button in the navigation bar)
+          </p>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -25,18 +43,19 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/recipes"
-                className="px-6 py-3 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700"
+              <Button
+                asChild
+                className="px-6 py-6 text-lg bg-purple-600 hover:bg-purple-700"
               >
-                Browse Recipes
-              </Link>
-              <Link
-                href="/manage/create"
-                className="px-6 py-3 rounded border border-gray-600 text-gray-300 font-semibold hover:bg-gray-800"
+                <Link href="/recipes">Browse Recipes</Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="px-6 py-6 text-lg border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
-                Create Recipe
-              </Link>
+                <Link href="/manage/create">Create Recipe</Link>
+              </Button>
             </div>
           </div>
         </div>

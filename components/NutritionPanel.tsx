@@ -1,91 +1,106 @@
 "use client";
 
+import React from "react";
 import { Nutrition } from "@/types/recipe";
+import { Flame, Beef, Wheat, Droplets, Leaf } from "lucide-react";
 
 interface NutritionPanelProps {
   nutrition: Nutrition;
-  servingMultiplier?: number;
-  className?: string;
+  multiplier?: number;
 }
 
-export const NutritionPanel = ({
-  nutrition,
-  servingMultiplier = 1,
-  className,
-}: NutritionPanelProps) => {
-  const scale = (val: number) => Math.round(val * servingMultiplier);
+interface MacroInfo {
+  label: string;
+  value: number;
+  unit: string;
+  color: string;
+  bgColor: string;
+  icon: React.ReactNode;
+  max: number;
+}
 
-  const macros = [
+export default function NutritionPanel({
+  nutrition,
+  multiplier = 1,
+}: NutritionPanelProps) {
+  const scaled = {
+    calories: Math.round(nutrition.calories * multiplier),
+    proteinG: Math.round(nutrition.proteinG * multiplier * 10) / 10,
+    carbsG: Math.round(nutrition.carbsG * multiplier * 10) / 10,
+    fatG: Math.round(nutrition.fatG * multiplier * 10) / 10,
+    fiberG: Math.round(nutrition.fiberG * multiplier * 10) / 10,
+  };
+
+  const macros: MacroInfo[] = [
+    {
+      label: "Calories",
+      value: scaled.calories,
+      unit: "kcal",
+      color: "bg-orange-500",
+      bgColor: "bg-orange-500/20",
+      icon: <Flame size={18} className="text-orange-400" />,
+      max: 2000,
+    },
     {
       label: "Protein",
-      value: scale(nutrition.proteinG),
-      color: "bg-secondary",
+      value: scaled.proteinG,
       unit: "g",
+      color: "bg-rose-500",
+      bgColor: "bg-rose-500/20",
+      icon: <Beef size={18} className="text-rose-400" />,
+      max: 100,
     },
     {
       label: "Carbs",
-      value: scale(nutrition.carbsG),
-      color: "bg-accent",
+      value: scaled.carbsG,
       unit: "g",
+      color: "bg-blue-500",
+      bgColor: "bg-blue-500/20",
+      icon: <Wheat size={18} className="text-blue-400" />,
+      max: 300,
     },
     {
       label: "Fat",
-      value: scale(nutrition.fatG),
-      color: "bg-primary",
+      value: scaled.fatG,
       unit: "g",
+      color: "bg-amber-500",
+      bgColor: "bg-amber-500/20",
+      icon: <Droplets size={18} className="text-amber-400" />,
+      max: 100,
     },
     {
       label: "Fiber",
-      value: scale(nutrition.fiberG),
-      color: "bg-indigo-400",
+      value: scaled.fiberG,
       unit: "g",
+      color: "bg-emerald-500",
+      bgColor: "bg-emerald-500/20",
+      icon: <Leaf size={18} className="text-emerald-400" />,
+      max: 40,
     },
   ];
 
-  const totalCalories = scale(nutrition.calories);
-
   return (
-    <div
-      className={`bg-card rounded-lg border border-border p-6 shadow-sm ${className || ""}`}
-    >
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-black uppercase tracking-tighter">
-          Nutrition Facts
-        </h3>
-        <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-          per serving
-        </span>
-      </div>
-
-      <div className="text-4xl font-black mb-8 text-center text-primary tabular-nums">
-        {totalCalories}{" "}
-        <span className="text-sm font-bold text-text-muted uppercase tracking-widest">
-          kcal
-        </span>
-      </div>
-
-      <div className="space-y-5">
+    <div className="p-5 rounded bg-gray-800 border border-gray-700">
+      <h3 className="text-lg font-bold text-white mb-4">Nutrition Facts</h3>
+      <div className="space-y-4">
         {macros.map((macro) => {
-          // Calculate relative percentage for the bar (simplified for visualization)
-          const percentage = Math.min(
-            ((macro.value * 9) / totalCalories) * 100,
-            100,
-          );
-
+          const percentage = Math.min((macro.value / macro.max) * 100, 100);
           return (
-            <div key={macro.label} className="group">
-              <div className="flex justify-between mb-1.5 text-xs font-bold uppercase tracking-wide">
-                <span className="text-text-muted group-hover:text-text transition-colors">
-                  {macro.label}
-                </span>
-                <span className="tabular-nums">
-                  {macro.value}
-                  {macro.unit}
+            <div key={macro.label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  {macro.icon}
+                  <span className="text-sm font-medium text-gray-300">
+                    {macro.label}
+                  </span>
+                </div>
+                <span className="text-sm font-bold text-white">
+                  {macro.value} {macro.unit}
                 </span>
               </div>
-              <div className="h-2 bg-background rounded-full overflow-hidden shadow-inner">
+              <div className={`h-2 rounded ${macro.bgColor}`}>
                 <div
-                  className={`h-full ${macro.color} rounded-full transition-all duration-1000 ease-out shadow-sm`}
+                  className={`h-full rounded ${macro.color} transition-all duration-500 ease-out`}
                   style={{ width: `${percentage}%` }}
                 />
               </div>
@@ -95,4 +110,4 @@ export const NutritionPanel = ({
       </div>
     </div>
   );
-};
+}

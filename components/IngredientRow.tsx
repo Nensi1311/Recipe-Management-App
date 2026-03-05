@@ -1,117 +1,106 @@
 "use client";
 
+import React from "react";
 import { Ingredient, MeasurementUnit } from "@/types/recipe";
 import { useCooking } from "@/context/CookingContext";
-import { Trash2, GripVertical } from "lucide-react";
+import { X, GripVertical } from "lucide-react";
+import clsx from "clsx";
 
 interface IngredientRowProps {
   ingredient: Ingredient;
-  index: number;
-  scaled?: boolean;
-  editable?: boolean;
-  onChange?: (
+  mode?: "read" | "edit";
+  index?: number;
+  onUpdate?: (
     index: number,
     field: keyof Ingredient,
     value: string | number | boolean,
   ) => void;
   onRemove?: (index: number) => void;
-  canRemove?: boolean;
-  className?: string;
 }
 
-export const IngredientRow = ({
+export default function IngredientRow({
   ingredient,
-  index,
-  scaled,
-  editable,
-  onChange,
+  mode = "read",
+  index = 0,
+  onUpdate,
   onRemove,
-  canRemove,
-  className,
-}: IngredientRowProps) => {
-  const { convertUnit, scaleIngredient } = useCooking();
+}: IngredientRowProps) {
+  const { convertUnit } = useCooking();
 
-  const displayQty = scaled
-    ? scaleIngredient(ingredient.quantity)
-    : ingredient.quantity;
-  const display = convertUnit(displayQty, ingredient.unit);
-
-  if (editable) {
+  if (mode === "read") {
+    const display = convertUnit(ingredient.quantity, ingredient.unit);
     return (
-      <div
-        className={`flex gap-2 items-center mb-2 animate-fade-in ${className || ""}`}
-      >
-        <div className="cursor-grab active:cursor-grabbing text-text-muted">
-          <GripVertical size={18} />
-        </div>
-        <input
-          type="number"
-          value={ingredient.quantity}
-          onChange={(e) =>
-            onChange?.(index, "quantity", parseFloat(e.target.value))
-          }
-          className="w-16 p-2 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm"
-          placeholder="Qty"
-        />
-        <select
-          value={ingredient.unit}
-          onChange={(e) =>
-            onChange?.(index, "unit", e.target.value as MeasurementUnit)
-          }
-          className="p-2 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm"
-        >
-          <option value="g">g</option>
-          <option value="kg">kg</option>
-          <option value="ml">ml</option>
-          <option value="l">l</option>
-          <option value="tsp">tsp</option>
-          <option value="tbsp">tbsp</option>
-          <option value="cup">cup</option>
-          <option value="piece">piece</option>
-          <option value="pinch">pinch</option>
-          <option value="to taste">to taste</option>
-        </select>
-        <input
-          type="text"
-          value={ingredient.name}
-          onChange={(e) => onChange?.(index, "name", e.target.value)}
-          className="flex-1 p-2 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm"
-          placeholder="Ingredient name"
-        />
-        <label className="flex items-center gap-1 text-xs font-semibold cursor-pointer">
-          <input
-            type="checkbox"
-            checked={ingredient.optional}
-            onChange={(e) => onChange?.(index, "optional", e.target.checked)}
-            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-          />
-          Opt.
-        </label>
-        {canRemove && (
-          <button
-            onClick={() => onRemove?.(index)}
-            className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
-          >
-            <Trash2 size={18} />
-          </button>
+      <div className="flex items-center gap-3 py-2 px-3 rounded hover:bg-gray-800 transition-colors group">
+        <div className="w-2 h-2 rounded bg-purple-400 shrink-0" />
+        <span className="text-white font-medium">{display}</span>
+        <span className="text-gray-300">{ingredient.name}</span>
+        {ingredient.optional && (
+          <span className="text-xs text-gray-500 italic ml-auto">
+            (optional)
+          </span>
         )}
       </div>
     );
   }
 
+  // Edit mode
   return (
-    <div
-      className={`flex justify-between py-3 border-b border-border items-center group transition-colors hover:bg-background/50 ${className || ""}`}
-    >
-      <div className="flex gap-2 font-medium">
-        <span className="text-primary font-bold">{display}</span>
-        <span className="text-text">{ingredient.name}</span>
-      </div>
-      {ingredient.optional && (
-        <span className="text-[10px] uppercase tracking-wider font-bold text-text-muted opacity-60 group-hover:opacity-100 transition-opacity">
-          Optional
-        </span>
-      )}
+    <div className="flex items-center gap-2 py-2 px-3 rounded bg-gray-800 border border-gray-700">
+      <GripVertical size={16} className="text-gray-600 shrink-0" />
+
+      <input
+        type="number"
+        min={0}
+        step={0.1}
+        value={ingredient.quantity}
+        onChange={(e) =>
+          onUpdate?.(index, "quantity", parseFloat(e.target.value) || 0)
+        }
+        className="w-20 px-2 py-1.5 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none"
+        placeholder="Qty"
+      />
+
+      <select
+        value={ingredient.unit}
+        onChange={(e) => onUpdate?.(index, "unit", e.target.value)}
+        className="w-24 px-2 py-1.5 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none"
+      >
+        {Object.values(MeasurementUnit).map((u) => (
+          <option key={u} value={u}>
+            {u}
+          </option>
+        ))}
+      </select>
+
+      <input
+        type="text"
+        value={ingredient.name}
+        onChange={(e) => onUpdate?.(index, "name", e.target.value)}
+        className="flex-1 px-2 py-1.5 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none"
+        placeholder="Ingredient name"
+      />
+
+      <label
+        className={clsx(
+          "flex items-center gap-1 text-xs cursor-pointer",
+          ingredient.optional ? "text-amber-400" : "text-gray-500",
+        )}
+      >
+        <input
+          type="checkbox"
+          checked={ingredient.optional}
+          onChange={(e) => onUpdate?.(index, "optional", e.target.checked)}
+          className="rounded border-gray-600"
+        />
+        Optional
+      </label>
+
+      <button
+        onClick={() => onRemove?.(index)}
+        className="p-1 rounded hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-colors"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
-};
+}

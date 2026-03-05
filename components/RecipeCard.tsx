@@ -1,150 +1,192 @@
 "use client";
 
-import Link from "next/link";
+import React from "react";
+import { Recipe, Difficulty } from "@/types/recipe";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { RootState, AppDispatch } from "@/store";
 import { saveRecipe, unsaveRecipe } from "@/store/cookbookSlice";
-import { Recipe } from "@/types/recipe";
-import { Clock, Users, Heart, Edit, Trash2, Star } from "lucide-react";
+import { Clock, Star, Heart, Edit2, Trash2 } from "lucide-react";
+import clsx from "clsx";
+import Link from "next/link";
 
 interface RecipeCardProps {
   recipe: Recipe;
-  variant: "public" | "manage";
+  variant?: "public" | "manage";
   onEdit?: (recipe: Recipe) => void;
-  onDelete?: (id: string) => void;
-  className?: string;
+  onDelete?: (recipe: Recipe) => void;
 }
 
-const difficultyColors: Record<string, string> = {
-  easy: "bg-green-100 text-green-800",
-  medium: "bg-yellow-100 text-yellow-800",
-  hard: "bg-red-100 text-red-700",
+const difficultyColors: Record<Difficulty, string> = {
+  [Difficulty.Easy]: "bg-emerald-500/20 text-emerald-400",
+  [Difficulty.Medium]: "bg-amber-500/20 text-amber-400",
+  [Difficulty.Hard]: "bg-rose-500/20 text-rose-400",
 };
 
-export const RecipeCard = ({
+export default function RecipeCard({
   recipe,
-  variant,
+  variant = "public",
   onEdit,
   onDelete,
-  className,
-}: RecipeCardProps) => {
-  const dispatch = useDispatch();
-  const { savedIds } = useSelector((state: RootState) => state.cookbook);
+}: RecipeCardProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const savedIds = useSelector((state: RootState) => state.cookbook.savedIds);
   const isSaved = savedIds.includes(recipe.id);
 
-  const toggleSave = (e: React.MouseEvent) => {
+  const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
+
+  const handleSaveToggle = (e: React.MouseEvent) => {
     e.preventDefault();
-    let newSavedIds: string[];
+    e.stopPropagation();
     if (isSaved) {
       dispatch(unsaveRecipe(recipe.id));
-      newSavedIds = savedIds.filter((id) => id !== recipe.id);
     } else {
       dispatch(saveRecipe(recipe.id));
-      newSavedIds = [...savedIds, recipe.id];
     }
-    localStorage.setItem("savedRecipeIds", JSON.stringify(newSavedIds));
   };
 
-  const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
-  const difficultyClass =
-    difficultyColors[recipe.difficulty?.toLowerCase()] ??
-    "bg-gray-100 text-gray-700";
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onEdit?.(recipe);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete?.(recipe);
+  };
+
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star
+        key={i}
+        size={14}
+        className={clsx(
+          i < Math.round(rating)
+            ? "fill-amber-400 text-amber-400"
+            : "text-gray-600",
+        )}
+      />
+    ));
+  };
 
   return (
-    <div
-      className={`group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative ${className || ""}`}
-    >
-      {/* Image */}
+    <div className="group relative rounded overflow-hidden bg-gray-800 border border-gray-700 hover:border-gray-500">
       <Link href={`/recipes/${recipe.slug}`} className="block">
-        <div className="relative h-48 overflow-hidden">
+        {/* Image */}
+        <div className="relative h-48 overflow-hidden bg-gray-900 flex items-center justify-center border-b border-gray-700">
           {recipe.coverImageUrl ? (
             <img
               src={recipe.coverImageUrl}
               alt={recipe.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100 opacity-20">
-              <Users size={64} />
+            <div className="w-full h-full flex items-center justify-center bg-gray-900 text-gray-600">
+              <span className="text-4xl font-bold opacity-20">
+                {recipe.title.charAt(0).toUpperCase()}
+              </span>
             </div>
           )}
 
-          <button
-            onClick={toggleSave}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 shadow-md transition-all hover:scale-110 text-gray-400 hover:text-red-500"
-          >
-            <Heart
-              size={20}
-              className={
-                isSaved ? "fill-red-500 text-red-500" : "text-gray-400"
-              }
-            />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {/* Title + Difficulty */}
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className="font-semibold text-lg line-clamp-1 text-gray-900 dark:text-white">
-              {recipe.title}
-            </h3>
+          {/* Manage mode badge */}
+          {variant === "manage" && (
             <span
-              className={`text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0 ${difficultyClass}`}
+              className={clsx(
+                "absolute top-3 left-3 px-2 py-1 rounded text-xs font-semibold",
+                recipe.published
+                  ? "bg-emerald-600 text-white"
+                  : "bg-amber-600 text-white",
+              )}
             >
-              {recipe.difficulty}
+              {recipe.published ? "Published" : "Draft"}
             </span>
-          </div>
+          )}
 
-          {/* Category */}
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            {recipe.category}
-          </p>
-
-          {/* Time + Rating */}
-          <div className="flex items-center gap-4 mb-3 text-sm text-gray-600 dark:text-gray-300">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{totalTime} min</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span>{recipe.rating?.toFixed(1)}</span>
-              <span className="text-gray-400">({recipe.ratingCount})</span>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1">
-            {recipe.dietaryTags?.map((tag) => (
+          {/* Dietary Tags */}
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
+            {recipe.dietaryTags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="text-xs px-2.5 py-0.5 rounded-full border border-gray-200 bg-gray-50 text-gray-600 font-medium"
+                className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-800 text-gray-300"
               >
                 {tag}
               </span>
             ))}
           </div>
         </div>
+
+        {/* Content */}
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium text-purple-400 uppercase tracking-wider">
+              {recipe.category}
+            </span>
+            <span
+              className={clsx(
+                "px-2 py-0.5 rounded text-[10px] font-semibold",
+                difficultyColors[recipe.difficulty],
+              )}
+            >
+              {recipe.difficulty}
+            </span>
+          </div>
+
+          <h3 className="text-lg font-bold text-white mb-2 line-clamp-1 group-hover:text-purple-400">
+            {recipe.title}
+          </h3>
+
+          <div className="flex items-center justify-between border-t border-gray-700 pt-3 mt-3">
+            <div className="flex items-center gap-1 text-gray-400 text-sm">
+              <Clock size={14} />
+              <span>{totalTime} min</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {renderStars(recipe.rating)}
+              <span className="text-xs text-gray-500 ml-1">
+                ({recipe.ratingCount})
+              </span>
+            </div>
+          </div>
+        </div>
       </Link>
 
-      {/* Admin Actions Overlay */}
+      {/* Interactive Overlay Buttons - outside the main Link to avoid nesting <a> tags */}
+      {/* Save Button */}
+      <button
+        onClick={handleSaveToggle}
+        className={clsx(
+          "absolute top-3 right-3 p-2 rounded z-10",
+          isSaved
+            ? "bg-rose-600 text-white"
+            : "bg-gray-900/80 text-gray-300 hover:text-white",
+        )}
+      >
+        <Heart size={18} className={clsx(isSaved && "fill-current")} />
+      </button>
+
+      {/* Manage variant buttons */}
       {variant === "manage" && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 p-1.5 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit?.(recipe)}
-            className="p-2 hover:bg-zinc-100 rounded-xl transition-colors text-gray-700"
-          >
-            <Edit size={16} />
-          </button>
-          <button
-            onClick={() => onDelete?.(recipe.id)}
-            className="p-2 hover:bg-red-50 rounded-xl transition-colors text-red-500"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2 mt-0 pt-3 border-t border-gray-700">
+            <button
+              onClick={handleEdit}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded bg-gray-700 text-white hover:bg-gray-600 text-sm font-medium"
+            >
+              <Edit2 size={14} />
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded bg-gray-700 text-rose-400 hover:bg-gray-600 text-sm font-medium"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
-};
+}

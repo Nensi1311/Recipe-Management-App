@@ -1,284 +1,385 @@
 "use client";
 
-import { useState } from "react";
-import { Recipe } from "@/types/recipe";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
+import { rateRecipe } from "@/store/recipeSlice";
+import { saveRecipe, unsaveRecipe } from "@/store/cookbookSlice";
 import { useCooking } from "@/context/CookingContext";
 import { useRecipeScaler } from "@/hooks/useRecipeScaler";
-import { NutritionPanel } from "@/components/NutritionPanel";
-import { IngredientRow } from "@/components/IngredientRow";
-import { StepCard } from "@/components/StepCard";
+import { Recipe } from "@/types/recipe";
+import IngredientRow from "@/components/IngredientRow";
+import StepCard from "@/components/StepCard";
+import NutritionPanel from "@/components/NutritionPanel";
 import {
   Clock,
   Users,
-  Flame,
-  ChevronLeft,
-  Heart,
-  Share2,
-  Printer,
   Star,
-  Plus,
+  Heart,
   Minus,
-  ChefHat,
+  Plus,
+  ChevronLeft,
 } from "lucide-react";
+import clsx from "clsx";
 import Link from "next/link";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { saveRecipe, unsaveRecipe } from "@/store/cookbookSlice";
-import { rateRecipe } from "@/store/recipeSlice";
 
 interface RecipeDetailClientProps {
-  recipe: Recipe;
+  slug: string;
+  initialRecipe?: Recipe;
 }
 
-export const RecipeDetailClient = ({
-  recipe: initialRecipe,
-}: RecipeDetailClientProps) => {
-  const dispatch = useDispatch();
-  const { savedIds } = useSelector((state: RootState) => state.cookbook);
-  const {
-    servingMultiplier,
-    setServingMultiplier,
-    unitSystem,
-    toggleUnitSystem,
-  } = useCooking();
-  const { scaledIngredients, scaledNutrition } = useRecipeScaler(
-    initialRecipe,
-    servingMultiplier,
+export default function RecipeDetailClient({
+  slug,
+  initialRecipe,
+}: RecipeDetailClientProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const { recipes, status } = useSelector((state: RootState) => state.recipes);
+
+  // Find recipe in Redux if not provided via initialRecipe
+  const recipe = initialRecipe || recipes.find((r) => r.slug === slug);
+
+  const savedIds = useSelector((state: RootState) => state.cookbook.savedIds);
+  const isSaved = recipe ? savedIds.includes(recipe.id) : false;
+
+  const { servingMultiplier, setServingMultiplier, unitSystem, setUnitSystem } =
+    useCooking();
+
+  const { scaledIngredients, scaledServings, scaledNutrition } =
+    useRecipeScaler(recipe || ({} as Recipe), servingMultiplier);
+
+  const [activeTimerStep, setActiveTimerStep] = useState<number | null>(null);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [currentRating, setCurrentRating] = useState(recipe?.rating || 0);
+  const [currentRatingCount, setCurrentRatingCount] = useState(
+    recipe?.ratingCount || 0,
   );
-  const [userRating, setUserRating] = useState(0);
 
-  const isSaved = savedIds.includes(initialRecipe.id);
-
-  const handleSaveToggle = () => {
-    let newSavedIds: string[];
-    if (isSaved) {
-      dispatch(unsaveRecipe(initialRecipe.id));
-      newSavedIds = savedIds.filter((id) => id !== initialRecipe.id);
-    } else {
-      dispatch(saveRecipe(initialRecipe.id));
-      newSavedIds = [...savedIds, initialRecipe.id];
+  // Update local state when recipe changes (e.g. after Redux hydration)
+  useEffect(() => {
+    if (recipe) {
+      setCurrentRating(recipe.rating);
+      setCurrentRatingCount(recipe.ratingCount);
     }
-    localStorage.setItem("savedRecipeIds", JSON.stringify(newSavedIds));
-  };
+  }, [recipe]);
 
-  const handleRate = (rating: number) => {
-    setUserRating(rating);
-    dispatch(rateRecipe({ id: initialRecipe.id, rating }) as any);
-  };
+  const activeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const totalTime =
-    initialRecipe.prepTimeMinutes + initialRecipe.cookTimeMinutes;
+  if (!recipe) {
+    // If we're still loading, show a simple spinner/message
+    if (status === "loading" || status === "idle") {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-gray-400">Loading recipe...</p>
+        </div>
+      );
+    }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-      {/* Breadcrumbs & Actions */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    // Truly not found
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <h1 className="text-4xl font-extrabold text-white mb-4">404</h1>
+        <p className="text-xl text-gray-400 mb-8">Recipe not found</p>
         <Link
           href="/recipes"
-          className="flex items-center gap-2 text-text-muted hover:text-primary font-bold text-sm uppercase tracking-widest transition-colors"
+          className="px-6 py-3 rounded bg-purple-600 text-white font-bold hover:bg-purple-700 transition-colors"
         >
-          <ChevronLeft size={16} /> Back to Recipes
+          Back to Recipes
         </Link>
-        <div className="flex gap-3">
-          <button
-            onClick={handleSaveToggle}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-sm ${
-              isSaved
-                ? "bg-secondary text-white"
-                : "bg-card border border-border text-text-muted hover:border-secondary"
-            }`}
+      </div>
+    );
+  }
+
+  const handleStartTimer = useCallback(
+    (stepNumber: number, _minutes: number) => {
+      // Stop previous timer
+      if (activeTimerRef.current) {
+        clearInterval(activeTimerRef.current);
+      }
+      setActiveTimerStep(stepNumber);
+    },
+    [],
+  );
+
+  const handleRate = useCallback(
+    async (rating: number) => {
+      setUserRating(rating);
+      try {
+        const result = await dispatch(
+          rateRecipe({ id: recipe.id, rating }),
+        ).unwrap();
+        setCurrentRating(result.rating);
+        setCurrentRatingCount(result.ratingCount);
+      } catch {
+        // handle error
+      }
+    },
+    [dispatch, recipe.id],
+  );
+
+  const handleSaveToggle = useCallback(() => {
+    if (isSaved) {
+      dispatch(unsaveRecipe(recipe.id));
+    } else {
+      dispatch(saveRecipe(recipe.id));
+    }
+  }, [dispatch, isSaved, recipe.id]);
+
+  const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Back Button */}
+      <Link
+        href="/recipes"
+        className="inline-flex items-center gap-1 text-gray-400 hover:text-white mb-6 transition-colors"
+      >
+        <ChevronLeft size={18} />
+        Back to Recipes
+      </Link>
+
+      {/* Hero */}
+      <div className="relative h-64 sm:h-80 lg:h-96 rounded overflow-hidden mb-8 bg-gray-900 flex items-center justify-center">
+        {recipe.coverImageUrl ? (
+          <img
+            src={recipe.coverImageUrl}
+            alt={recipe.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-900 text-gray-700">
+            <span className="text-8xl md:text-[10rem] font-bold opacity-20">
+              {recipe.title.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gray-900/60" />
+
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-2 py-1 rounded bg-purple-600 text-white text-xs font-medium">
+              {recipe.category}
+            </span>
+            <span
+              className={clsx(
+                "px-2 py-1 rounded text-xs font-medium",
+                recipe.difficulty === "easy" && "bg-emerald-600 text-white",
+                recipe.difficulty === "medium" && "bg-amber-600 text-white",
+                recipe.difficulty === "hard" && "bg-rose-600 text-white",
+              )}
+            >
+              {recipe.difficulty}
+            </span>
+            {recipe.dietaryTags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-1 rounded bg-gray-700 text-gray-300 text-xs font-medium"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-2">
+            {recipe.title}
+          </h1>
+          <p className="text-gray-300 text-lg max-w-2xl">
+            {recipe.description}
+          </p>
+        </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSaveToggle}
+          className={clsx(
+            "absolute top-4 right-4 p-3 rounded",
+            isSaved
+              ? "bg-rose-600 text-white"
+              : "bg-gray-800 text-gray-300 hover:text-white",
+          )}
+        >
+          <Heart size={22} className={clsx(isSaved && "fill-current")} />
+        </button>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {[
+          {
+            icon: Clock,
+            label: "Prep",
+            value: `${recipe.prepTimeMinutes} min`,
+          },
+          {
+            icon: Clock,
+            label: "Cook",
+            value: `${recipe.cookTimeMinutes} min`,
+          },
+          { icon: Clock, label: "Total", value: `${totalTime} min` },
+          { icon: Users, label: "Servings", value: String(scaledServings) },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="flex items-center gap-3 p-4 rounded bg-gray-800 border border-gray-700"
           >
-            <Heart size={16} className={isSaved ? "fill-white" : ""} />
-            {isSaved ? "Saved to Cookbook" : "Save to Cookbook"}
-          </button>
-          <button className="p-2.5 rounded-full bg-card border border-border text-text-muted hover:bg-border transition-colors">
-            <Share2 size={18} />
-          </button>
-          <button className="p-2.5 rounded-full bg-card border border-border text-text-muted hover:bg-border transition-colors">
-            <Printer size={18} />
-          </button>
+            <stat.icon size={20} className="text-purple-400" />
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider">
+                {stat.label}
+              </p>
+              <p className="text-lg font-bold text-white">{stat.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 p-4 rounded bg-gray-800 border border-gray-700">
+        {/* Serving Size Adjuster */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400 font-medium">Servings:</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setServingMultiplier(servingMultiplier - 0.5)}
+              disabled={servingMultiplier <= 0.5}
+              className="p-1.5 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-30"
+            >
+              <Minus size={16} />
+            </button>
+            <span className="w-16 text-center text-lg font-bold text-white">
+              {scaledServings}
+            </span>
+            <button
+              onClick={() => setServingMultiplier(servingMultiplier + 0.5)}
+              className="p-1.5 rounded bg-gray-700 text-gray-300 hover:bg-gray-600"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Unit Toggle */}
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <span className="text-sm text-gray-400 font-medium">Units:</span>
+          <div className="flex rounded overflow-hidden border border-gray-700">
+            <button
+              onClick={() => setUnitSystem("metric")}
+              className={clsx(
+                "px-4 py-1.5 text-sm font-medium transition-colors",
+                unitSystem === "metric"
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-700 text-gray-400 hover:text-white",
+              )}
+            >
+              Metric
+            </button>
+            <button
+              onClick={() => setUnitSystem("imperial")}
+              className={clsx(
+                "px-4 py-1.5 text-sm font-medium transition-colors",
+                unitSystem === "imperial"
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-700 text-gray-400 hover:text-white",
+              )}
+            >
+              Imperial
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Left Column: Image & Info */}
-        <div className="lg:col-span-8">
-          <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl mb-8 group">
-            {initialRecipe.coverImageUrl ? (
-              <img
-                src={initialRecipe.coverImageUrl}
-                alt={initialRecipe.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full bg-border flex items-center justify-center">
-                <ChefHat size={64} className="text-text-muted opacity-20" />
-              </div>
-            )}
-            <div className="absolute top-6 left-6 flex flex-wrap gap-2">
-              {initialRecipe.dietaryTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black uppercase tracking-widest text-secondary shadow-lg"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-8 bg-linear-to-t from-black/80 to-transparent text-white">
-              <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest opacity-80 mb-2">
-                <span className="flex items-center gap-1">
-                  <Clock size={14} /> {totalTime} min
-                </span>
-                <span className="flex items-center gap-1">
-                  <Flame size={14} /> {initialRecipe.difficulty}
-                </span>
-              </div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4">
-                {initialRecipe.title}
-              </h1>
-              <p className="text-lg opacity-90 max-w-2xl font-medium leading-relaxed">
-                {initialRecipe.description}
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
-            {[
-              {
-                label: "Prep Time",
-                value: `${initialRecipe.prepTimeMinutes}m`,
-                icon: <Clock className="text-primary" />,
-              },
-              {
-                label: "Cook Time",
-                value: `${initialRecipe.cookTimeMinutes}m`,
-                icon: <Clock className="text-secondary" />,
-              },
-              {
-                label: "Servings",
-                value: initialRecipe.servings,
-                icon: <Users className="text-accent" />,
-              },
-              {
-                label: "Rating",
-                value: `${initialRecipe.rating || "N/A"}`,
-                icon: <Star className="text-yellow-500 fill-yellow-500" />,
-              },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                className="bg-card p-4 rounded-2xl border border-border flex items-center gap-4"
-              >
-                <div className="p-3 bg-background rounded-xl">{stat.icon}</div>
-                <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                    {stat.label}
-                  </div>
-                  <div className="font-black text-lg">{stat.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Ingredients Section */}
-          <section className="mb-12">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 className="text-3xl font-black tracking-tight text-text">
-                Ingredients
-              </h2>
-              <div className="flex flex-wrap items-center gap-4 bg-card p-2 rounded-2xl border border-border">
-                <div className="flex items-center gap-3 shrink-0">
-                  <button
-                    onClick={() =>
-                      setServingMultiplier(
-                        Math.max(0.5, servingMultiplier - 0.5),
-                      )
-                    }
-                    className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center hover:bg-border transition-colors shrink-0"
-                  >
-                    <Minus size={18} />
-                  </button>
-                  <span className="font-black w-14 text-center text-xl">
-                    {servingMultiplier}x
-                  </span>
-                  <button
-                    onClick={() =>
-                      setServingMultiplier(servingMultiplier + 0.5)
-                    }
-                    className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center hover:bg-border transition-colors shrink-0"
-                  >
-                    <Plus size={18} />
-                  </button>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <button
-                  onClick={toggleUnitSystem}
-                  className="px-4 py-2 bg-secondary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 shrink-0"
-                >
-                  {unitSystem} Units
-                </button>
-              </div>
-            </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Ingredients */}
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-4">Ingredients</h2>
             <div className="space-y-1">
-              {scaledIngredients.map((ing, idx) => (
-                <IngredientRow key={ing.id} ingredient={ing} index={idx} />
+              {scaledIngredients.map((ingredient) => (
+                <IngredientRow
+                  key={ingredient.id}
+                  ingredient={ingredient}
+                  mode="read"
+                />
               ))}
             </div>
           </section>
 
-          {/* Steps Section */}
+          {/* Steps */}
           <section>
-            <h2 className="text-3xl font-black tracking-tight text-text mb-8">
-              Method
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Instructions</h2>
             <div className="space-y-4">
-              {initialRecipe.steps.map((step, idx) => (
-                <StepCard key={idx} step={step} index={idx} />
+              {recipe.steps.map((step) => (
+                <StepCard
+                  key={step.stepNumber}
+                  step={step}
+                  mode="read"
+                  activeTimerStep={activeTimerStep}
+                  onStartTimer={handleStartTimer}
+                />
               ))}
+            </div>
+          </section>
+
+          {/* Rating Section */}
+          <section className="p-6 rounded bg-gray-800 border border-gray-700">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Rate this Recipe
+            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-3xl font-bold text-white">
+                {currentRating}
+              </span>
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Star
+                    key={i}
+                    size={18}
+                    className={clsx(
+                      i < Math.round(currentRating)
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-gray-600",
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-gray-500 text-sm">
+                ({currentRatingCount} reviews)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-400">Your rating:</span>
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleRate(i + 1)}
+                    onMouseEnter={() => setHoverRating(i + 1)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className="transition-transform hover:scale-125"
+                  >
+                    <Star
+                      size={28}
+                      className={clsx(
+                        "transition-colors",
+                        i < (hoverRating || userRating)
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-gray-600 hover:text-gray-500",
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
         </div>
 
-        {/* Right Column: Nutrition & Rating */}
-        <div className="lg:col-span-4 space-y-8">
-          {scaledNutrition && (
-            <NutritionPanel
-              nutrition={scaledNutrition}
-              servingMultiplier={servingMultiplier}
-            />
-          )}
-
-          <div className="bg-card rounded-3xl border border-border p-8 shadow-sm">
-            <h3 className="text-xl font-black tracking-tight mb-6">
-              Rate this recipe
-            </h3>
-            <div className="flex gap-2 mb-6">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => handleRate(star)}
-                  className="transition-transform hover:scale-125"
-                >
-                  <Star
-                    size={32}
-                    className={
-                      star <= (userRating || initialRecipe.rating)
-                        ? "text-yellow-500 fill-yellow-500"
-                        : "text-border"
-                    }
-                  />
-                </button>
-              ))}
-            </div>
-            <p className="text-sm text-text-muted font-bold uppercase tracking-widest">
-              {initialRecipe.ratingCount} people have rated this
-            </p>
-          </div>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <NutritionPanel nutrition={scaledNutrition} />
         </div>
       </div>
     </div>
   );
-};
+}

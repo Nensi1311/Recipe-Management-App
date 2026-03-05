@@ -1,17 +1,16 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect /manage routes
+  // Log request
+  console.log(`[Middleware] ${pathname} at ${new Date().toISOString()}`);
+
+  // Protect /manage/* routes
   if (pathname.startsWith("/manage")) {
-    const token = request.cookies.get("chef_token");
+    const chefToken = request.cookies.get("chef_token");
 
-    // Log path and timestamp
-    console.log(`[Middleware] ${new Date().toISOString()} - Path: ${pathname}`);
-
-    if (!token) {
+    if (!chefToken) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.searchParams.set("error", "login_required");

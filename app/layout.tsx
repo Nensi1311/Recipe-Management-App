@@ -1,30 +1,36 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/app/providers";
-import { Nav } from "@/components/Nav";
+import { StoreProvider } from "@/store/StoreProvider";
+import { CookingProvider } from "@/context/CookingContext";
+import Navigation from "@/components/Navigation";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "RecipeMaster | Your Premium Cooking Companion",
-  description: "Manage, scale, and master your favorite recipes with ease.",
+  title: "Recipe Manager",
+  description: "Discover, create, and manage your favorite recipes.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en">
-      <body>
-        <Providers>
-          <Nav />
-          <main
-            className="container"
-            style={{ paddingTop: "calc(var(--header-height) + 2rem)" }}
-          >
-            {children}
-          </main>
-        </Providers>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body
+        className={`${inter.variable} font-sans antialiased bg-gray-950 text-white min-h-screen`}
+      >
+        <StoreProvider>
+          <CookingProvider>
+            <Navigation />
+            <main className="pt-16">{children}</main>
+          </CookingProvider>
+        </StoreProvider>
       </body>
     </html>
   );

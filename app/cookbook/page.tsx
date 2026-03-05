@@ -1,90 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store";
 import { fetchRecipes } from "@/store/recipeSlice";
-import { setSavedIds } from "@/store/cookbookSlice";
-import { RecipeCard } from "@/components/RecipeCard";
-import { Heart, BookOpen, SearchX } from "lucide-react";
+import { Recipe } from "@/types/recipe";
+import RecipeCard from "@/components/RecipeCard";
 import Link from "next/link";
+import { Bookmark, BookOpen } from "lucide-react";
 
 export default function CookbookPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { recipes, status } = useSelector((state: RootState) => state.recipes);
-  const { savedIds } = useSelector((state: RootState) => state.cookbook);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const savedIds = useSelector((state: RootState) => state.cookbook.savedIds);
+  const allRecipes = useSelector((state: RootState) => state.recipes.recipes);
+  const status = useSelector((state: RootState) => state.recipes.status);
+  const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("savedRecipeIds");
-    if (saved) {
-      dispatch(setSavedIds(JSON.parse(saved)));
+    if (status === "idle") {
+      dispatch(fetchRecipes());
     }
-    setIsHydrated(true);
-    dispatch(fetchRecipes());
-  }, [dispatch]);
+  }, [dispatch, status]);
 
   useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem("savedRecipeIds", JSON.stringify(savedIds));
-    }
-  }, [savedIds, isHydrated]);
-
-  const savedRecipes = recipes.filter((r) => savedIds.includes(r.id));
-
-  if (!isHydrated || status === "loading") {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-12 animate-pulse">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="bg-card h-[400px] rounded-3xl border border-border shadow-sm"
-          ></div>
-        ))}
-      </div>
-    );
-  }
+    const filtered = allRecipes.filter((r) => savedIds.includes(r.id));
+    setSavedRecipes(filtered);
+  }, [allRecipes, savedIds]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <Bookmark size={28} className="text-purple-400" />
         <div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-2 text-text">
-            My <span className="text-secondary italic">Cookbook</span>
-          </h1>
-          <p className="text-text-muted font-medium text-lg leading-relaxed">
-            Your curated collection of mastered dishes and kitchen inspirations.
+          <h1 className="text-3xl font-extrabold text-white">My Cookbook</h1>
+          <p className="text-gray-400">
+            {savedRecipes.length > 0
+              ? `${savedRecipes.length} saved recipe${savedRecipes.length > 1 ? "s" : ""}`
+              : "Your recipe collection"}
           </p>
         </div>
-        <div className="px-8 py-3 bg-secondary text-black rounded-2xl font-black text-xl shadow-lg shadow-secondary/20 flex items-center gap-3">
-          <Heart size={24} className="fill-white" />
-          {savedRecipes.length} Saved
-        </div>
-      </header>
+      </div>
 
       {savedRecipes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {savedRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
+            <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-24 px-6 bg-card rounded-3xl border border-dashed border-border text-center">
-          <div className="p-8 bg-background rounded-full mb-8 shadow-inner">
-            <Heart size={48} className="text-secondary" />
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-32 h-32 rounded bg-gray-800 flex items-center justify-center mb-6">
+            <Bookmark size={56} className="text-gray-700" />
           </div>
-          <h3 className="text-3xl font-black tracking-tight mb-4">
-            Your cookbook is empty
+          <h3 className="text-2xl font-bold text-gray-400 mb-2">
+            No Saved Recipes Yet
           </h3>
-          <p className="text-text-muted max-w-md font-medium text-lg leading-relaxed mb-10">
-            Start exploring our collection and save your favorite recipes to
-            access them quickly anytime, anywhere.
+          <p className="text-gray-500 mb-6 text-center max-w-md">
+            Start exploring recipes and save your favorites by clicking the
+            heart icon!
           </p>
           <Link
             href="/recipes"
-            className="flex items-center gap-3 px-10 py-4 bg-primary text-white font-black uppercase tracking-widest square-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            className="flex items-center gap-2 px-6 py-3 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors"
           >
-            Browse Recipes <BookOpen size={20} />
+            <BookOpen size={18} />
+            Browse Recipes
           </Link>
         </div>
       )}

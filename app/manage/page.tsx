@@ -1,103 +1,84 @@
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "@/store";
-import { fetchRecipes, deleteRecipe } from "@/store/recipeSlice";
-import { RecipeCard } from "@/components/RecipeCard";
-import { Plus, ChefHat, LayoutDashboard, Utensils } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { RootState, AppDispatch } from "@/store";
+import { fetchRecipes, deleteRecipeThunk } from "@/store/recipeSlice";
+import RecipeCard from "@/components/RecipeCard";
 import { Recipe } from "@/types/recipe";
+import { Plus, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
 
-export default function ManageDashboard() {
+export default function ManagePage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { recipes, status } = useSelector((state: RootState) => state.recipes);
 
   useEffect(() => {
-    dispatch(fetchRecipes("published=false")); // Could fetch all or just pending
-    // For now, let's fetch all as the dashboard should show all managed recipes
+    // Always fetch everything (including drafts) when entering manage
     dispatch(fetchRecipes());
   }, [dispatch]);
-
-  const handleDelete = async (id: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this recipe? This action cannot be undone.",
-      )
-    ) {
-      await dispatch(deleteRecipe(id));
-    }
-  };
 
   const handleEdit = (recipe: Recipe) => {
     router.push(`/manage/${recipe.id}/edit`);
   };
 
+  const handleDelete = async (recipe: Recipe) => {
+    console.log("handleDelete called for recipe:", recipe.id, recipe.title);
+    if (confirm(`Delete "${recipe.title}"?`)) {
+      console.log("Dispatching deleteRecipeThunk for:", recipe.id);
+      dispatch(deleteRecipeThunk(recipe.id));
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+    <div>
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <div className="flex items-center gap-3 text-secondary mb-2">
-            {/* <LayoutDashboard size={20} /> */}
-            {/* <span className="font-black uppercase tracking-widest text-[10px]">
-              Management
-            </span> */}
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-text">
-            Chef <span className="text-primary italic">Dashboard</span>
-          </h1>
-          <p className="text-text-muted font-medium text-lg mt-2">
-            Oversee your culinary portfolio and draft new masterpieces.
+          <h1 className="text-3xl font-extrabold text-white">My Recipes</h1>
+          <p className="text-gray-400 mt-1">
+            {recipes.length} recipe{recipes.length !== 1 ? "s" : ""}
           </p>
         </div>
         <Link
           href="/manage/create"
-          className="flex items-center gap-3 px-8 py-4 bg-primary text-black font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+          className="flex items-center gap-2 px-5 py-2.5 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700"
         >
-          <Plus size={20} /> New Recipe
+          <Plus size={18} />
+          New Recipe
         </Link>
-      </header>
+      </div>
 
-      {status === "loading" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-card h-[400px] rounded-3xl border border-border"
-            ></div>
-          ))}
-        </div>
-      ) : recipes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+      {recipes.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {recipes.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
               variant="manage"
-              onEdit={() => handleEdit(recipe)}
-              onDelete={() => handleDelete(recipe.id)}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-24 px-6 bg-card rounded-3xl border border-dashed border-border text-center">
-          <div className="p-8 bg-background rounded-full mb-8 shadow-inner">
-            <Utensils size={48} className="text-text-muted opacity-40" />
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="w-24 h-24 rounded bg-gray-800 flex items-center justify-center mb-4">
+            <UtensilsCrossed size={40} className="text-gray-700" />
           </div>
-          <h3 className="text-3xl font-black tracking-tight mb-4">
+          <h3 className="text-xl font-bold text-gray-400 mb-2">
             No recipes yet
           </h3>
-          <p className="text-text-muted max-w-md font-medium text-lg leading-relaxed mb-10">
-            Your kitchen is prepped and ready. Time to share your first
-            world-class recipe with the community.
+          <p className="text-gray-500 mb-4">
+            Create your first recipe to get started!
           </p>
           <Link
             href="/manage/create"
-            className="flex items-center gap-3 px-10 py-4 bg-primary text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
+            className="flex items-center gap-2 px-6 py-3 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors"
           >
-            Create Your First Recipe
+            <Plus size={18} />
+            Create Recipe
           </Link>
         </div>
       )}

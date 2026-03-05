@@ -1,116 +1,128 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRecipes, saveRecipes, slugify } from "@/lib/db";
-import { Recipe, DietaryTag, Difficulty } from "@/types/recipe";
+import { getAllRecipes, addRecipe } from "@/lib/recipeStore";
+import { DietaryTag, Difficulty, Recipe } from "@/types/recipe";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+
   const category = searchParams.get("category");
-  const dietaryTags = searchParams
-    .get("dietaryTags")
-    ?.split(",")
-    .filter(Boolean) as DietaryTag[];
+  const dietaryTagsParam = searchParams.get("dietaryTags");
   const difficulty = searchParams.get("difficulty");
-  const search = searchParams.get("search")?.toLowerCase();
+  const search = searchParams.get("search");
   const maxCookTime = searchParams.get("maxCookTime");
   const published = searchParams.get("published");
-  const slug = searchParams.get("slug");
 
-  let recipes = await getRecipes();
+  let recipes = getAllRecipes();
 
-  // Filter by slug (for detail page)
-  if (slug) {
-    const recipe = recipes.find((r) => r.slug === slug);
-    return NextResponse.json(recipe ? [recipe] : []);
+  if (published !== null) {
+    recipes = recipes.filter((r) => r.published === (published === "true"));
   }
 
-  // General filters
-  if (category && category !== "all") {
-    recipes = recipes.filter((r) => r.category === category);
-  }
-
-  if (dietaryTags && dietaryTags.length > 0) {
-    recipes = recipes.filter((r) =>
-      dietaryTags.every((tag) => r.dietaryTags.includes(tag)),
+  if (category) {
+    recipes = recipes.filter(
+      (r) => r.category.toLowerCase() === category.toLowerCase(),
     );
   }
 
-  if (difficulty && difficulty !== "all") {
+  if (dietaryTagsParam) {
+    const tags = dietaryTagsParam.split(",") as DietaryTag[];
+    recipes = recipes.filter((r) =>
+      tags.every((tag) => r.dietaryTags.includes(tag)),
+    );
+  }
+
+  if (difficulty) {
     recipes = recipes.filter((r) => r.difficulty === difficulty);
   }
 
   if (search) {
+    const term = search.toLowerCase();
     recipes = recipes.filter(
       (r) =>
-        r.title.toLowerCase().includes(search) ||
-        r.description.toLowerCase().includes(search),
+        r.title.toLowerCase().includes(term) ||
+        r.description.toLowerCase().includes(term) ||
+        r.category.toLowerCase().includes(term),
     );
   }
 
   if (maxCookTime) {
-    const maxTime = parseInt(maxCookTime);
-    recipes = recipes.filter(
-      (r) => r.prepTimeMinutes + r.cookTimeMinutes <= maxTime,
-    );
+    const max = parseInt(maxCookTime, 10);
+    if (!isNaN(max)) {
+      recipes = recipes.filter((r) => r.cookTimeMinutes <= max);
+    }
   }
-
-  if (published !== null) {
-    const isPublished = published === "true";
-    recipes = recipes.filter((r) => r.published === isPublished);
-  }
-
-  // Sort by createdAt descending
-  recipes.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
 
   return NextResponse.json(recipes);
 }
 
+interface CreateRecipeBody {
+  title: string;
+  description: string;
+  coverImageUrl: string;
+  authorId: string;
+  category: string;
+  dietaryTags: DietaryTag[];
+  difficulty: Difficulty;
+  servings: number;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  ingredients: Recipe["ingredients"];
+  steps: Recipe["steps"];
+  nutrition: Recipe["nutrition"];
+  published: boolean;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const recipes = await getRecipes();
+    const body = (await request.json()) as CreateRecipeBody;
 
     // Validation
+    const errors: string[] = [];
     if (!body.title || body.title.length < 3)
-      return NextResponse.json({ error: "Title min 3 chars" }, { status: 400 });
+      errors.push("Title must be at least 3 characters");
     if (!body.ingredients || body.ingredients.length < 1)
-      return NextResponse.json(
-        { error: "At least 1 ingredient" },
-        { status: 400 },
-      );
+      errors.push("At least 1 ingredient required");
     if (!body.steps || body.steps.length < 1)
-      return NextResponse.json({ error: "At least 1 step" }, { status: 400 });
-    if (body.servings < 1)
-      return NextResponse.json({ error: "Servings >= 1" }, { status: 400 });
-    if (body.prepTimeMinutes < 0)
-      return NextResponse.json({ error: "Prep time >= 0" }, { status: 400 });
-    if (body.cookTimeMinutes < 0)
-      return NextResponse.json({ error: "Cook time >= 0" }, { status: 400 });
+      errors.push("At least 1 step required");
+    if (!body.servings || body.servings < 1)
+      errors.push("Servings must be at least 1");
+    if (body.prepTimeMinutes === undefined || body.prepTimeMinutes < 0)
+      errors.push("Prep time must be >= 0");
+    if (body.cookTimeMinutes === undefined || body.cookTimeMinutes < 0)
+      errors.push("Cook time must be >= 0");
 
-    const newRecipe: Recipe = {
-      ...body,
-      id: crypto.randomUUID(),
-      slug: slugify(body.title),
-      rating: 0,
-      ratingCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Ensure slug uniqueness
-    let finalSlug = newRecipe.slug;
-    let counter = 1;
-    while (recipes.some((r) => r.slug === finalSlug)) {
-      finalSlug = `${newRecipe.slug}-${counter++}`;
+    if (errors.length > 0) {
+      return NextResponse.json({ errors }, { status: 400 });
     }
-    newRecipe.slug = finalSlug;
 
-    recipes.push(newRecipe);
-    await saveRecipes(recipes);
+    const recipe = addRecipe({
+      title: body.title,
+      description: body.description || "",
+      coverImageUrl: body.coverImageUrl || "",
+      authorId: body.authorId || "anonymous",
+      category: body.category || "Uncategorized",
+      dietaryTags: body.dietaryTags || [],
+      difficulty: body.difficulty || Difficulty.Easy,
+      servings: body.servings,
+      prepTimeMinutes: body.prepTimeMinutes,
+      cookTimeMinutes: body.cookTimeMinutes,
+      ingredients: body.ingredients,
+      steps: body.steps,
+      nutrition: body.nutrition || {
+        calories: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+        fiberG: 0,
+      },
+      published: body.published ?? false,
+    });
 
-    return NextResponse.json(newRecipe, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    return NextResponse.json(recipe, { status: 201 });
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
   }
 }

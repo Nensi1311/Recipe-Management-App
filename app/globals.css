@@ -1,79 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #f06449; /* Matching the orange/pink in buttons */
-  --primary-gradient: linear-gradient(135deg, #f06449 0%, #e14e86 100%);
-  --secondary: #4ecdc4;
-  --accent: #ffe66d;
-  --bg: #fffcf8; /* Soft warm background */
-  --hero-bg: linear-gradient(180deg, #fff2e6 0%, #fffcf8 100%);
-  --card-bg: #ffffff;
-  --text: #1a1a1a;
-  --text-muted: #666666;
-  --border: #f0f0f0;
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
-  --rounded: 20px;
-  --rounded-lg: 32px;
+  --font-inter: "Inter", sans-serif;
 }
 
-[data-theme="dark"] {
-  --bg: #121212;
-  --hero-bg: linear-gradient(180deg, #1e1b18 0%, #121212 100%);
-  --card-bg: #1e1e1e;
-  --text: #f5f5f5;
-  --text-muted: #a0a0a0;
-  --border: #2d2d2d;
+/* Base Light Theme Setup */
+html:not(.dark) body {
+  background-color: #f8fafc;
+  color: #1e293b;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+html:not(.dark) .bg-gray-950 {
+  background-color: #f8fafc;
+}
+html:not(.dark) .bg-gray-900 {
+  background-color: #ffffff;
+}
+html:not(.dark) .bg-gray-800 {
+  background-color: #f1f5f9;
+}
+html:not(.dark) .bg-gray-700 {
+  background-color: #e2e8f0;
+}
+html:not(.dark) .border-gray-800 {
+  border-color: #e2e8f0;
+}
+html:not(.dark) .border-gray-700 {
+  border-color: #cbd5e1;
+}
+html:not(.dark) .border-gray-600 {
+  border-color: #94a3b8;
+}
+html:not(.dark) .text-white {
+  color: #0f172a;
+}
+html:not(.dark) .text-gray-300 {
+  color: #334155;
+}
+html:not(.dark) .text-gray-400 {
+  color: #475569;
+}
+html:not(.dark) .text-gray-500 {
+  color: #64748b;
 }
 
-body {
-  font-family:
-    "Inter",
-    -apple-system,
-    sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
-
-h1,
-h2,
-h3 {
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.hero-gradient-text {
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.btn-hero-primary {
-  background: var(--primary-gradient);
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.btn-hero-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(240, 100, 73, 0.3);
-}
-
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg);
+/* Keep pulse red for timers */
+@keyframes pulse-red {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }

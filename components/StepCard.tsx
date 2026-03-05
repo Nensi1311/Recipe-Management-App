@@ -1,215 +1,194 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { RecipeStep } from "@/types/recipe";
-import {
-  Clock,
-  Play,
-  Pause,
-  RotateCcw,
-  ChevronUp,
-  ChevronDown,
-  Trash2,
-  Info,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, X, Timer, Lightbulb } from "lucide-react";
+import clsx from "clsx";
 
 interface StepCardProps {
   step: RecipeStep;
-  index: number;
-  editable?: boolean;
-  onChange?: (
+  mode?: "read" | "edit";
+  index?: number;
+  totalSteps?: number;
+  activeTimerStep?: number | null;
+  onStartTimer?: (stepNumber: number, minutes: number) => void;
+  onUpdate?: (
     index: number,
     field: keyof RecipeStep,
     value: string | number,
   ) => void;
   onRemove?: (index: number) => void;
-  onMoveUp?: (index: number) => void;
-  onMoveDown?: (index: number) => void;
-  isFirst?: boolean;
-  isLast?: boolean;
-  className?: string;
+  onMove?: (index: number, direction: "up" | "down") => void;
 }
 
-export const StepCard = ({
+export default function StepCard({
   step,
-  index,
-  editable,
-  onChange,
+  mode = "read",
+  index = 0,
+  totalSteps = 1,
+  activeTimerStep,
+  onStartTimer,
+  onUpdate,
   onRemove,
-  onMoveUp,
-  onMoveDown,
-  isFirst,
-  isLast,
-  className,
-}: StepCardProps) => {
-  const [timeLeft, setTimeLeft] = useState(
-    step.durationMinutes ? step.durationMinutes * 60 : 0,
-  );
-  const [isActive, setIsActive] = useState(false);
-  const [showTip, setShowTip] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  onMove,
+}: StepCardProps) {
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isTimerActive = activeTimerStep === step.stepNumber;
 
   useEffect(() => {
-    if (isActive && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0) {
-      setIsActive(false);
-      if (timerRef.current) clearInterval(timerRef.current);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+    if (!isTimerActive && intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      setTimeLeft(null);
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isActive, timeLeft]);
+  }, [isTimerActive]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const handleStartTimer = useCallback(() => {
+    if (step.durationMinutes <= 0) return;
+    onStartTimer?.(step.stepNumber, step.durationMinutes);
+    setTimeLeft(step.durationMinutes * 60);
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [step.durationMinutes, step.stepNumber, onStartTimer]);
+
+  const formatTime = (seconds: number): string => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const isTimeUp = step.durationMinutes && timeLeft === 0;
-  const isWarning = timeLeft < 10 && timeLeft > 0;
-
-  if (editable) {
+  if (mode === "read") {
     return (
-      <div
-        className={`bg-card rounded-lg border border-border p-4 mb-4 animate-fade-in ${className || ""}`}
-      >
-        <div className="flex justify-between mb-4">
-          <span className="font-bold text-sm uppercase tracking-wider text-text-muted">
-            Step {step.stepNumber}
-          </span>
-          <div className="flex gap-2">
-            {!isFirst && (
-              <button
-                onClick={() => onMoveUp?.(index)}
-                className="p-1 hover:bg-background rounded transition-colors"
-                title="Move Up"
-              >
-                <ChevronUp size={18} />
-              </button>
-            )}
-            {!isLast && (
-              <button
-                onClick={() => onMoveDown?.(index)}
-                className="p-1 hover:bg-background rounded transition-colors"
-                title="Move Down"
-              >
-                <ChevronDown size={18} />
-              </button>
-            )}
-            <button
-              onClick={() => onRemove?.(index)}
-              className="p-1 hover:bg-red-50 text-red-500 rounded transition-colors"
-              title="Remove Step"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
+      <div className="flex gap-4 p-4 rounded bg-gray-800 border border-gray-700 hover:border-gray-600 transition-colors">
+        {/* Step number */}
+        <div className="shrink-0 w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-lg">
+          {step.stepNumber}
         </div>
-        <textarea
-          value={step.instruction}
-          onChange={(e) => onChange?.(index, "instruction", e.target.value)}
-          placeholder="What should be done in this step?"
-          className="w-full min-h-[100px] p-3 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm mb-3 resize-none"
-        />
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted block mb-1">
-              Duration (min)
-            </label>
-            <input
-              type="number"
-              value={step.durationMinutes || ""}
-              onChange={(e) =>
-                onChange?.(index, "durationMinutes", parseInt(e.target.value))
-              }
-              className="w-full p-2 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm"
-            />
-          </div>
-          <div className="flex-[2]">
-            <label className="text-[10px] font-bold uppercase tracking-wide text-text-muted block mb-1">
-              Cooking Tip (optional)
-            </label>
-            <input
-              type="text"
-              value={step.tip || ""}
-              onChange={(e) => onChange?.(index, "tip", e.target.value)}
-              className="w-full p-2 rounded border border-border bg-background focus:ring-2 focus:ring-primary outline-none text-sm"
-              placeholder="e.g. Be careful not to overcook"
-            />
-          </div>
+
+        <div className="flex-1 space-y-2">
+          <p className="text-gray-200 leading-relaxed">{step.instruction}</p>
+
+          {step.tip && (
+            <div className="flex items-start gap-2 p-2 rounded bg-amber-900/50 border border-amber-700">
+              <Lightbulb
+                size={16}
+                className="text-amber-400 mt-0.5 shrink-0"
+              />
+              <p className="text-sm text-amber-300">{step.tip}</p>
+            </div>
+          )}
+
+          {step.durationMinutes > 0 && (
+            <div className="flex items-center gap-3">
+              {isTimerActive && timeLeft !== null ? (
+                <div
+                  className={clsx(
+                    "flex items-center gap-2 px-4 py-2 rounded font-mono text-lg font-bold",
+                    timeLeft <= 10
+                      ? "bg-rose-500/20 text-rose-400 animate-pulse"
+                      : "bg-purple-900/50 text-purple-300",
+                  )}
+                >
+                  <Timer size={18} />
+                  {formatTime(timeLeft)}
+                </div>
+              ) : (
+                <button
+                  onClick={handleStartTimer}
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-gray-700 text-purple-400 text-sm font-medium hover:bg-gray-600 transition-colors"
+                >
+                  <Timer size={16} />
+                  Start Timer ({step.durationMinutes} min)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex gap-4 mb-8 group animate-fade-in ${className || ""}`}>
-      <div className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center font-bold flex-shrink-0 mt-1 shadow-sm group-hover:scale-110 transition-transform">
-        {step.stepNumber}
+    <div className="flex gap-3 p-4 rounded bg-gray-800 border border-gray-700">
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-sm font-bold text-purple-400">
+          {step.stepNumber}
+        </span>
+        <button
+          onClick={() => onMove?.(index, "up")}
+          disabled={index === 0}
+          className="p-1 rounded hover:bg-gray-700 disabled:opacity-30 text-gray-400"
+        >
+          <ChevronUp size={16} />
+        </button>
+        <button
+          onClick={() => onMove?.(index, "down")}
+          disabled={index === totalSteps - 1}
+          className="p-1 rounded hover:bg-gray-700 disabled:opacity-30 text-gray-400"
+        >
+          <ChevronDown size={16} />
+        </button>
       </div>
-      <div className="flex-1">
-        <p className="text-lg mb-3 text-text leading-relaxed">
-          {step.instruction}
-        </p>
 
-        {step.tip && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowTip(!showTip)}
-              className="flex items-center gap-1.5 text-secondary font-bold text-sm bg-none hover:underline focus:outline-none"
-            >
-              <Info size={16} /> {showTip ? "Hide Tip" : "Show Tip"}
-            </button>
-            {showTip && (
-              <div className="mt-2 p-3 border-l-4 border-secondary bg-secondary/5 rounded-r italic text-sm text-text-muted transition-all animate-fade-in">
-                {step.tip}
-              </div>
-            )}
-          </div>
-        )}
+      <div className="flex-1 space-y-2">
+        <textarea
+          value={step.instruction}
+          onChange={(e) => onUpdate?.(index, "instruction", e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none resize-none"
+          rows={3}
+          placeholder="Step instruction..."
+        />
 
-        {step.durationMinutes && step.durationMinutes > 0 && (
-          <div className="flex items-center gap-4 bg-background p-3 rounded-lg border border-border shadow-sm w-fit">
-            <div
-              className={`flex items-center gap-2 text-xl font-black w-24 tabular-nums ${isWarning ? "text-red-500 animate-pulse" : "text-text"}`}
-            >
-              <Clock
-                size={20}
-                className={isActive ? "animate-spin-slow" : ""}
-              />
-              {isTimeUp ? "DONE" : formatTime(timeLeft)}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsActive(!isActive)}
-                className="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
-              >
-                {isActive ? <Pause size={16} /> : <Play size={16} />}
-              </button>
-              <button
-                onClick={() => {
-                  setIsActive(false);
-                  setTimeLeft(step.durationMinutes! * 60);
-                }}
-                className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity shadow-sm"
-              >
-                <RotateCcw size={16} />
-              </button>
-            </div>
-            {isTimeUp && (
-              <span className="font-black text-red-500 text-sm uppercase tracking-widest animate-bounce">
-                Time's Up!
-              </span>
-            )}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={step.tip}
+              onChange={(e) => onUpdate?.(index, "tip", e.target.value)}
+              className="w-full px-3 py-1.5 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none"
+              placeholder="Optional tip..."
+            />
           </div>
-        )}
+          <input
+            type="number"
+            min={0}
+            value={step.durationMinutes}
+            onChange={(e) =>
+              onUpdate?.(
+                index,
+                "durationMinutes",
+                parseInt(e.target.value) || 0,
+              )
+            }
+            className="w-24 px-3 py-1.5 rounded bg-gray-700 border border-gray-600 text-white text-sm focus:border-purple-500 focus:outline-none"
+            placeholder="Min"
+          />
+        </div>
       </div>
+
+      <button
+        onClick={() => onRemove?.(index)}
+        className="p-1 rounded hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-colors self-start"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
-};
+}

@@ -1,65 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRecipes, saveRecipes } from "@/lib/db";
+import { getRecipeById, updateRecipe, deleteRecipe } from "@/lib/recipeStore";
 import { Recipe } from "@/types/recipe";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const recipes = await getRecipes();
-  const recipe = recipes.find((r) => r.id === id);
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
+export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  const recipe = getRecipeById(id);
   if (!recipe) {
     return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
   }
-
   return NextResponse.json(recipe);
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
-    const body = await request.json();
-    const recipes = await getRecipes();
-    const index = recipes.findIndex((r) => r.id === id);
-
-    if (index === -1) {
+    const body = (await request.json()) as Partial<
+      Omit<Recipe, "id" | "createdAt">
+    >;
+    const updated = updateRecipe(id, body);
+    if (!updated) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
-
-    const updatedRecipe: Recipe = {
-      ...recipes[index],
-      ...body,
-      id, // Ensure ID remains the same
-      updatedAt: new Date().toISOString(),
-    };
-
-    recipes[index] = updatedRecipe;
-    await saveRecipes(recipes);
-
-    return NextResponse.json(updatedRecipe);
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const recipes = await getRecipes();
-  const initialLength = recipes.length;
-  const filteredRecipes = recipes.filter((r) => r.id !== id);
-
-  if (filteredRecipes.length === initialLength) {
+  const success = deleteRecipe(id);
+  if (!success) {
     return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
   }
-
-  await saveRecipes(filteredRecipes);
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ message: "Recipe deleted" });
 }

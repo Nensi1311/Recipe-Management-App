@@ -1,63 +1,68 @@
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { RecipeFilters } from "@/types/recipe";
+import { useMemo } from "react";
+import { Recipe, RecipeFilters, DietaryTag } from "@/types/recipe";
 
-export const useFilteredRecipes = () => {
-  const recipes = useSelector((state: RootState) => state.recipes.recipes);
-  const filters = useSelector((state: RootState) => state.recipes.filters);
+interface FilteredResult {
+  filteredRecipes: Recipe[];
+  count: number;
+  categories: string[];
+}
 
-  const filteredRecipes = recipes.filter((recipe) => {
+export function useFilteredRecipes(
+  recipes: Recipe[],
+  filters: RecipeFilters,
+): FilteredResult {
+  return useMemo(() => {
+    let result = [...recipes];
+
     // Category filter
-    if (filters.category !== "all" && recipe.category !== filters.category) {
-      return false;
+    if (filters.category) {
+      result = result.filter(
+        (r) => r.category.toLowerCase() === filters.category.toLowerCase(),
+      );
     }
 
-    // Dietary tags filter (must have ALL selected tags)
-    if (
-      filters.dietaryTags.length > 0 &&
-      !filters.dietaryTags.every((tag) => recipe.dietaryTags.includes(tag))
-    ) {
-      return false;
+    // Dietary tags filter
+    if (filters.dietaryTags && filters.dietaryTags.length > 0) {
+      result = result.filter((r) =>
+        filters.dietaryTags.every((tag: DietaryTag) =>
+          r.dietaryTags.includes(tag),
+        ),
+      );
     }
 
     // Difficulty filter
-    if (
-      filters.difficulty !== "all" &&
-      recipe.difficulty !== filters.difficulty
-    ) {
-      return false;
+    if (filters.difficulty) {
+      result = result.filter((r) => r.difficulty === filters.difficulty);
     }
 
-    // Search filter (title or description)
+    // Search filter
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      const matchesTitle = recipe.title.toLowerCase().includes(searchLower);
-      const matchesDesc = recipe.description
-        .toLowerCase()
-        .includes(searchLower);
-      if (!matchesTitle && !matchesDesc) return false;
+      const term = filters.search.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.title.toLowerCase().includes(term) ||
+          r.description.toLowerCase().includes(term) ||
+          r.category.toLowerCase().includes(term),
+      );
     }
 
-    // Max Cook Time filter
-    if (filters.maxCookTime !== null) {
-      const totalTime = recipe.prepTimeMinutes + recipe.cookTimeMinutes;
-      if (totalTime > filters.maxCookTime) return false;
+    // Max cook time filter
+    if (filters.maxCookTime !== null && filters.maxCookTime !== undefined) {
+      result = result.filter((r) => r.cookTimeMinutes <= filters.maxCookTime!);
     }
 
     // Published filter
-    if (filters.published !== null && recipe.published !== filters.published) {
-      return false;
+    if (filters.published !== null && filters.published !== undefined) {
+      result = result.filter((r) => r.published === filters.published);
     }
 
-    return true;
-  });
+    // Extract unique categories from ALL recipes (not filtered)
+    const categories = [...new Set(recipes.map((r) => r.category))].sort();
 
-  // Derive categories from the full un-filtered recipe list
-  const categories = Array.from(new Set(recipes.map((r) => r.category)));
-
-  return {
-    filteredRecipes,
-    count: filteredRecipes.length,
-    categories,
-  };
-};
+    return {
+      filteredRecipes: result,
+      count: result.length,
+      categories,
+    };
+  }, [recipes, filters]);
+}

@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { deleteRecipeThunk } from "./recipeSlice";
 
 interface CookbookState {
   savedIds: string[];
@@ -12,17 +13,23 @@ const cookbookSlice = createSlice({
   name: "cookbook",
   initialState,
   reducers: {
-    saveRecipe: (state, action: PayloadAction<string>) => {
+    saveRecipe(state, action: PayloadAction<string>) {
       if (!state.savedIds.includes(action.payload)) {
         state.savedIds.push(action.payload);
       }
     },
-    unsaveRecipe: (state, action: PayloadAction<string>) => {
+    unsaveRecipe(state, action: PayloadAction<string>) {
       state.savedIds = state.savedIds.filter((id) => id !== action.payload);
     },
-    setSavedIds: (state, action: PayloadAction<string[]>) => {
+    setSavedIds(state, action: PayloadAction<string[]>) {
       state.savedIds = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    // Listen for the delete thunk from recipeSlice
+    builder.addCase(deleteRecipeThunk.fulfilled, (state, action) => {
+      state.savedIds = state.savedIds.filter((id) => id !== action.payload);
+    });
   },
 });
 

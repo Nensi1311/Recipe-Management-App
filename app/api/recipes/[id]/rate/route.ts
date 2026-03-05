@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRecipes, saveRecipes } from "@/lib/db";
+import { rateRecipe } from "@/lib/recipeStore";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+interface RateBody {
+  rating: number;
+}
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   try {
-    const { rating } = await request.json();
+    const body = (await request.json()) as RateBody;
 
-    if (typeof rating !== "number" || rating < 1 || rating > 5) {
+    if (
+      typeof body.rating !== "number" ||
+      !Number.isInteger(body.rating) ||
+      body.rating < 1 ||
+      body.rating > 5
+    ) {
       return NextResponse.json(
-        { error: "Rating must be 1-5" },
+        { error: "Rating must be an integer between 1 and 5" },
         { status: 400 },
       );
     }
 
-    const recipes = await getRecipes();
-    const index = recipes.findIndex((r) => r.id === id);
-
-    if (index === -1) {
+    const result = rateRecipe(id, body.rating);
+    if (!result) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
 
-    const recipe = recipes[index];
-    const totalRatingValue = recipe.rating * recipe.ratingCount + rating;
-    const newRatingCount = recipe.ratingCount + 1;
-    const newRating = Number((totalRatingValue / newRatingCount).toFixed(1));
-
-    recipe.rating = newRating;
-    recipe.ratingCount = newRatingCount;
-    recipe.updatedAt = new Date().toISOString();
-
-    recipes[index] = recipe;
-    await saveRecipes(recipes);
-
-    return NextResponse.json({
-      rating: recipe.rating,
-      ratingCount: recipe.ratingCount,
-    });
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    return NextResponse.json(result);
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 },
+    );
   }
 }

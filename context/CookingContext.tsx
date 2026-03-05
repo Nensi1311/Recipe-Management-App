@@ -1,116 +1,136 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+} from "react";
 import { MeasurementUnit } from "@/types/recipe";
 
-interface CookingContextValue {
-  servingMultiplier: number; // e.g., 2.0 means double the recipe
-  setServingMultiplier: (n: number) => void;
-  scaleIngredient: (qty: number) => number;
-  unitSystem: "metric" | "imperial";
-  setUnitSystem: (s: "metric" | "imperial") => void;
-  toggleUnitSystem: () => void;
-  convertUnit: (qty: number, unit: MeasurementUnit) => string;
-  theme: "light" | "dark";
+type UnitSystem = "metric" | "imperial";
+type Theme = "light" | "dark";
+
+interface CookingContextType {
+  servingMultiplier: number;
+  unitSystem: UnitSystem;
+  theme: Theme;
+  setServingMultiplier: (multiplier: number) => void;
+  scaleIngredient: (quantity: number) => number;
+  setUnitSystem: (system: UnitSystem) => void;
+  convertUnit: (quantity: number, unit: MeasurementUnit) => string;
   toggleTheme: () => void;
 }
 
-const CookingContext = createContext<CookingContextValue | undefined>(
-  undefined,
-);
+const CookingContext = createContext<CookingContextType | undefined>(undefined);
 
-export const CookingProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [servingMultiplier, setServingMultiplier] = useState(1);
-  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+const metricToImperial: Partial<
+  Record<MeasurementUnit, { factor: number; unit: string }>
+> = {
+  [MeasurementUnit.Gram]: { factor: 0.03527396, unit: "oz" },
+  [MeasurementUnit.Kilogram]: { factor: 2.20462, unit: "lb" },
+  [MeasurementUnit.Milliliter]: { factor: 0.033814, unit: "fl oz" },
+  [MeasurementUnit.Liter]: { factor: 33.814, unit: "fl oz" },
+};
 
-  // Persistence
+export function CookingProvider({ children }: { children: ReactNode }) {
+  const [servingMultiplier, setServingMultiplierState] = useState<number>(1);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>("metric");
+  const [theme, setThemeState] = useState<Theme>("dark");
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load from localStorage on mount
   useEffect(() => {
-    const savedUnit = localStorage.getItem("unitSystem") as
-      | "metric"
-      | "imperial";
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark";
-    const savedMultiplier = localStorage.getItem("servingMultiplier");
-
-    if (savedUnit) setUnitSystem(savedUnit);
-    if (savedTheme) setTheme(savedTheme);
-    if (savedMultiplier) setServingMultiplier(parseFloat(savedMultiplier));
+    try {
+      const saved = localStorage.getItem("cooking-preferences");
+      if (saved) {
+        const prefs = JSON.parse(saved) as {
+          servingMultiplier?: number;
+          unitSystem?: UnitSystem;
+          theme?: Theme;
+        };
+        if (prefs.servingMultiplier)
+          setServingMultiplierState(prefs.servingMultiplier);
+        if (prefs.unitSystem) setUnitSystemState(prefs.unitSystem);
+        if (prefs.theme) setThemeState(prefs.theme);
+      }
+    } catch {
+      // ignore
+    }
+    setIsHydrated(true);
   }, []);
 
+  // Save to localStorage on change
   useEffect(() => {
-    localStorage.setItem("unitSystem", unitSystem);
-    localStorage.setItem("theme", theme);
-    localStorage.setItem("servingMultiplier", servingMultiplier.toString());
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [unitSystem, theme, servingMultiplier]);
+    if (!isHydrated) return;
+    localStorage.setItem(
+      "cooking-preferences",
+      JSON.stringify({ servingMultiplier, unitSystem, theme }),
+    );
+  }, [servingMultiplier, unitSystem, theme, isHydrated]);
 
-  const scaleIngredient = (qty: number) => {
-    return Math.round(qty * servingMultiplier * 100) / 100;
-  };
+  // Apply theme to document
+  useEffect(() => {
+    if (!isHydrated) return;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme, isHydrated]);
 
-  const convertUnit = (qty: number, unit: MeasurementUnit): string => {
-    if (unitSystem === "metric") return `${qty} ${unit}`;
+  const setServingMultiplier = useCallback((m: number) => {
+    setServingMultiplierState(Math.max(0.25, m));
+  }, []);
 
-    // Basic conversions for Metric to Imperial
-    let newQty = qty;
-    let newUnit = unit;
+  const scaleIngredient = useCallback(
+    (quantity: number): number => {
+      return Math.round(quantity * servingMultiplier * 100) / 100;
+    },
+    [servingMultiplier],
+  );
 
-    switch (unit) {
-      case "g":
-        newQty = qty * 0.035274;
-        newUnit = "oz" as any;
-        break;
-      case "kg":
-        newQty = qty * 2.20462;
-        newUnit = "lb" as any;
-        break;
-      case "ml":
-        newQty = qty * 0.033814;
-        newUnit = "fl oz" as any;
-        break;
-      case "l":
-        newQty = qty * 0.264172; // gallon or quart? Usually fl oz or cups in recipes.
-        // Keeping it simple as per PDF example "2.5 oz"
-        break;
-      default:
-        break;
-    }
+  const setUnitSystem = useCallback((system: UnitSystem) => {
+    setUnitSystemState(system);
+  }, []);
 
-    const roundedQty = Math.round(newQty * 100) / 100;
-    return `${roundedQty} ${newUnit}`;
-  };
+  const convertUnit = useCallback(
+    (quantity: number, unit: MeasurementUnit): string => {
+      const scaled = Math.round(quantity * servingMultiplier * 100) / 100;
+      if (unitSystem === "imperial" && metricToImperial[unit]) {
+        const conversion = metricToImperial[unit]!;
+        const converted = Math.round(scaled * conversion.factor * 100) / 100;
+        return `${converted} ${conversion.unit}`;
+      }
+      return `${scaled} ${unit}`;
+    },
+    [servingMultiplier, unitSystem],
+  );
 
-  const toggleUnitSystem = () => {
-    setUnitSystem((prev) => (prev === "metric" ? "imperial" : "metric"));
-  };
-
-  const toggleTheme = () =>
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
+  }, []);
 
   return (
     <CookingContext.Provider
       value={{
         servingMultiplier,
+        unitSystem,
+        theme,
         setServingMultiplier,
         scaleIngredient,
-        unitSystem,
         setUnitSystem,
-        toggleUnitSystem,
         convertUnit,
-        theme,
         toggleTheme,
       }}
     >
       {children}
     </CookingContext.Provider>
   );
-};
+}
 
-export const useCooking = () => {
+export function useCooking(): CookingContextType {
   const context = useContext(CookingContext);
-  if (!context)
+  if (!context) {
     throw new Error("useCooking must be used within a CookingProvider");
+  }
   return context;
-};
+}

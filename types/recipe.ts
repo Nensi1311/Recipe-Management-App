@@ -1,26 +1,39 @@
-export type DietaryTag =
-  | "vegan"
-  | "vegetarian"
-  | "gluten-free"
-  | "dairy-free"
-  | "keto"
-  | "paleo"
-  | "nut-free"
-  | "low-carb";
+// ── Enums / Union Types ──────────────────────────────────────
 
-export type Difficulty = "easy" | "medium" | "hard";
+export enum DietaryTag {
+  Vegan = "vegan",
+  Vegetarian = "vegetarian",
+  GlutenFree = "gluten-free",
+  DairyFree = "dairy-free",
+  Keto = "keto",
+  Paleo = "paleo",
+  NutFree = "nut-free",
+  LowCarb = "low-carb",
+}
 
-export type MeasurementUnit =
-  | "g"
-  | "kg"
-  | "ml"
-  | "l"
-  | "tsp"
-  | "tbsp"
-  | "cup"
-  | "piece"
-  | "pinch"
-  | "to taste";
+export enum Difficulty {
+  Easy = "easy",
+  Medium = "medium",
+  Hard = "hard",
+}
+
+export enum MeasurementUnit {
+  Gram = "g",
+  Kilogram = "kg",
+  Milliliter = "ml",
+  Liter = "l",
+  Teaspoon = "tsp",
+  Tablespoon = "tbsp",
+  Cup = "cup",
+  Ounce = "oz",
+  Pound = "lb",
+  FluidOunce = "fl oz",
+  Piece = "piece",
+  Pinch = "pinch",
+  Whole = "whole",
+}
+
+// ── Interfaces ───────────────────────────────────────────────
 
 export interface Ingredient {
   id: string;
@@ -33,8 +46,8 @@ export interface Ingredient {
 export interface RecipeStep {
   stepNumber: number;
   instruction: string;
-  durationMinutes?: number; // optional timer for this step
-  tip?: string;
+  durationMinutes: number;
+  tip: string;
 }
 
 export interface Nutrition {
@@ -50,19 +63,19 @@ export interface Recipe {
   title: string;
   slug: string;
   description: string;
-  coverImageUrl?: string;
+  coverImageUrl: string;
   authorId: string;
-  category: string; // e.g., "Breakfast", "Dinner", "Dessert"
+  category: string;
   dietaryTags: DietaryTag[];
   difficulty: Difficulty;
-  servings: number; // base serving count
+  servings: number;
   prepTimeMinutes: number;
   cookTimeMinutes: number;
   ingredients: Ingredient[];
   steps: RecipeStep[];
-  nutrition?: Nutrition; // per serving
+  nutrition: Nutrition;
   published: boolean;
-  rating: number; // average user rating, 0–5
+  rating: number;
   ratingCount: number;
   createdAt: string;
   updatedAt: string;
@@ -71,8 +84,8 @@ export interface Recipe {
 export interface RecipeFilters {
   category: string;
   dietaryTags: DietaryTag[];
-  difficulty: Difficulty | "all";
+  difficulty: string;
   search: string;
-  maxCookTime: number | null; // minutes
+  maxCookTime: number | null;
   published: boolean | null;
 }

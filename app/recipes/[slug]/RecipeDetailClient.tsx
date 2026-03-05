@@ -125,7 +125,7 @@ export const RecipeDetailClient = ({
                 </span>
               ))}
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/80 to-transparent text-white">
+            <div className="absolute bottom-0 left-0 right-0 p-8 bg-linear-to-t from-black/80 to-transparent text-white">
               <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest opacity-80 mb-2">
                 <span className="flex items-center gap-1">
                   <Clock size={14} /> {totalTime} min

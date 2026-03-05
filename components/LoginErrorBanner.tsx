@@ -1,20 +1,21 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, X } from "lucide-react";
 
 export default function LoginErrorBanner() {
   const [show, setShow] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("error") === "login_required") {
+    if (searchParams.get("error") === "login_required") {
       setShow(true);
       // Clean up URL without reload
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
-  }, []);
+  }, [searchParams]);
 
   if (!show) return null;
 

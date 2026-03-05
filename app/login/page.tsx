@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChefHat, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -233,5 +233,22 @@ export default function AuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[#fffcf8]">
+          <div className="animate-pulse flex flex-col items-center gap-4">
+            <div className="w-12 h-12 bg-gray-200 rounded-xl" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+          </div>
+        </div>
+      }
+    >
+      <AuthForm />
+    </Suspense>
   );
 }

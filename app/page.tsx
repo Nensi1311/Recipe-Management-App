@@ -3,6 +3,7 @@ import { RecipeCard } from "@/components/RecipeCard";
 import Link from "next/link";
 import { ChefHat, ArrowRight, Sparkles, Clock, TrendingUp } from "lucide-react";
 import LoginErrorBanner from "@/components/LoginErrorBanner";
+import { Suspense } from "react";
 
 export default async function Home() {
   const allRecipes = await getRecipes();
@@ -23,7 +24,9 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-500">
       {/* Login required banner */}
-      <LoginErrorBanner />
+      <Suspense fallback={null}>
+        <LoginErrorBanner />
+      </Suspense>
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">

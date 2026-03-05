@@ -1,124 +1,145 @@
 import { getRecipes } from "@/lib/db";
 import { RecipeCard } from "@/components/RecipeCard";
 import Link from "next/link";
-import { ChefHat, ArrowRight, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { ChefHat, ArrowRight, Sparkles, Clock, TrendingUp } from "lucide-react";
+import LoginErrorBanner from "@/components/LoginErrorBanner";
 
 export default async function Home() {
   const allRecipes = await getRecipes();
   const publishedRecipes = allRecipes.filter((r) => r.published);
 
+  // Sorting and slicing for different sections
   const featuredRecipes = publishedRecipes.slice(0, 3);
+  const topRated = [...publishedRecipes]
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 4);
   const recentRecipes = [...publishedRecipes]
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )
-    .slice(0, 6);
+    .slice(0, 3);
 
   return (
-    <div className="animate-fade-in pb-24">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-500">
+      {/* Login required banner */}
+      <LoginErrorBanner />
+
       {/* Hero Section */}
-      <section
-        className="relative overflow-hidden px-8 py-24 md:py-32 mb-16 text-center"
-        style={{
-          background:
-            "linear-gradient(135deg, #fde8d8 0%, #fce4ec 40%, #f3e5f5 70%, #ede7f6 100%)",
-        }}
-      >
-        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          <div
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-[#f06449] font-semibold text-sm mb-8"
-            style={{ background: "rgba(255,236,210,0.85)" }}
-          >
-            <Sparkles size={14} />
-            <span>Discover delicious recipes</span>
-          </div>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-r from-orange-500/5 to-pink-500/5 pointer-events-none" />
+        <div className="container mx-auto px-4 py-20 md:py-32 relative">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 mb-8 animate-fade-in-down">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-semibold tracking-wide uppercase">
+                Discover delicious recipes
+              </span>
+            </div>
 
-          <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight">
-            <span className="hero-gradient-text">Recipe Management</span>
-          </h1>
+            <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tighter">
+              <span className="bg-linear-to-r from-orange-600 via-pink-600 to-purple-600 bg-clip-text text-transparent">
+                Recipe Management
+              </span>
+            </h1>
 
-          <p className="text-base md:text-lg text-zinc-600 font-medium max-w-xl mx-auto mb-10 leading-relaxed">
-            Browse, save, create, and manage your favorite cooking recipes.
-            Scale ingredients, track nutrition, and cook with built-in timers.
-          </p>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed font-medium">
+              Browse, save, create, and manage your favorite cooking recipes.
+              Scale ingredients, track nutrition, and cook with built-in timers.
+            </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/recipes"
-              className="flex items-center justify-center gap-4 px-10 py-20 text-white font-bold square-full text-base shadow-lg transition-all hover:shadow-xl hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #f06449 0%, #e14e86 100%)",
-              }}
-            >
-              Browse Recipes <ArrowRight size={18} />
-            </Link>
-            <Link
-              href="/manage"
-              className="flex items-center justify-center gap-3 px-8 py-10 bg-white border border-zinc-200 text-zinc-800 font-bold square-full shadow-sm hover:bg-zinc-50 transition-all text-base"
-            >
-              <ChefHat size={18} className="text-zinc-500" />
-              Create Recipe
-            </Link>
+            <div className="flex flex-wrap gap-5 justify-center">
+              <Link href="/recipes">
+                <button className="h-12 px-8 rounded-xl bg-linear-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold flex items-center gap-2 shadow-xl shadow-orange-500/20 hover:scale-105 transition-all outline-none">
+                  Browse Recipes
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </Link>
+              <Link href="/manage">
+                <button className="h-12 px-8 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:scale-105 shadow-sm outline-none">
+                  <ChefHat className="w-5 h-5" />
+                  Create Recipe
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Featured Recipes */}
-      <section className="mb-24">
-        <div className="flex justify-between items-end mb-10">
+      <section className="container mx-auto px-4 py-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <h2 className="text-4xl font-extrabold text-[#0f172a]">
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-2">
               Featured Recipes
             </h2>
-            <p className="text-text-muted font-medium text-lg">
+            <p className="text-gray-600 dark:text-gray-400 font-medium">
               Handpicked favorites for you
             </p>
           </div>
-          <Link
-            href="/recipes"
-            className="flex items-center gap-2 font-bold text-sm text-text hover:text-primary transition-colors"
-          >
-            View All <ArrowRight size={16} />
+          <Link href="/recipes">
+            <button className="group flex items-center gap-2 font-bold text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">
+              View All{" "}
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
-          ))}
-        </div>
+        {publishedRecipes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featuredRecipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-white/50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+            <ChefHat className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500 font-bold">
+              No recipes yet. Be the first to create one!
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Top Rated Section */}
-      <section className="mb-24">
-        <div className="flex items-center gap-3 mb-10">
-          <TrendingUp size={28} className="text-[#f06449]" />
-          <h2 className="text-4xl font-extrabold text-[#0f172a]">Top Rated</h2>
-        </div>
+      {topRated.length > 0 && (
+        <section className="bg-white/30 dark:bg-gray-900/30 backdrop-blur-xs py-16 border-y border-gray-100 dark:border-gray-800">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-4 mb-12">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-orange-500" />
+              </div>
+              <h2 className="text-3xl font-black text-gray-900 dark:text-white">
+                Top Rated
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {topRated.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {publishedRecipes.slice(0, 3).map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
-          ))}
-        </div>
-      </section>
-
-      {/* Recently Added */}
-      <section>
-        <div className="flex items-center gap-3 mb-10">
-          <Clock size={28} className="text-[#3b82f6]" />
-          <h2 className="text-4xl font-extrabold text-[#0f172a]">
-            Recently Added
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {recentRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
-          ))}
-        </div>
-      </section>
+      {/* Recently Added Section */}
+      {recentRecipes.length > 0 && (
+        <section className="container mx-auto px-4 py-16 mb-16">
+          <div className="flex items-center gap-4 mb-12">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-blue-500" />
+            </div>
+            <h2 className="text-3xl font-black text-gray-900 dark:text-white">
+              Recently Added
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {recentRecipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} variant="public" />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

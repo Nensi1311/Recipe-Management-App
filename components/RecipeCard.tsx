@@ -69,10 +69,9 @@ export const RecipeCard = ({
             </div>
           )}
 
-          {/* Heart button */}
           <button
             onClick={toggleSave}
-            className="absolute top-3 right-3 p-10 rounded-full bg-white shadow-lg transition-all hover:scale-110"
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 shadow-md transition-all hover:scale-110 text-gray-400 hover:text-red-500"
           >
             <Heart
               size={20}

@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Recipe } from "@/types/recipe";
 import { RecipeCard } from "@/components/RecipeCard";
 import { HomeClient } from "@/components/HomeClient";
+import { getRecipes } from "@/lib/data";
 
 async function getFeaturedRecipes(): Promise<Recipe[]> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
   try {
-    const res = await fetch(`${baseUrl}/api/recipes?published=true`, { cache: "no-store" });
-    return res.json();
+    const recipes = getRecipes();
+    const published = recipes.filter(r => r.published);
+    return published.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   } catch {
     return [];
   }

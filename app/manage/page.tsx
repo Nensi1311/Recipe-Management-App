@@ -1,13 +1,14 @@
 import { Recipe } from "@/types/recipe";
 import { ManageDashboardClient } from "@/components/ManageDashboardClient";
 
+import { getRecipes } from "@/lib/data";
+
 async function getAllRecipes(): Promise<Recipe[]> {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
   try {
-    const res = await fetch(`${baseUrl}/api/recipes`, { cache: "no-store" });
-    return res.json();
+    const recipes = getRecipes();
+    return recipes.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   } catch {
     return [];
   }

@@ -1,0 +1,32 @@
+
+> recipe-app@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/10) ...
+   Generating static pages (2/10) 
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/login". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at l (/home/dev/Downloads/Recipe-Management-App/.next/server/chunks/127.js:1:11293)
+    at s (/home/dev/Downloads/Recipe-Management-App/.next/server/chunks/127.js:1:22152)
+    at n (/home/dev/Downloads/Recipe-Management-App/.next/server/app/login/page.js:1:2470)
+    at nj (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/home/dev/Downloads/Recipe-Management-App/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+
+   Generating static pages (4/10) 
+   Generating static pages (7/10) 
+ ✓ Generating static pages (10/10)
+
+> Export encountered errors on following paths:
+	/login/page: /login

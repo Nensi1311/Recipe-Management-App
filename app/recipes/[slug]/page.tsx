@@ -1,27 +1,27 @@
 import { notFound } from "next/navigation";
-import { getRecipeBySlug } from "@/lib/recipeStore";
-import RecipeDetailClient from "./RecipeDetailClient";
-import { cookies } from "next/headers";
+import { Recipe } from "@/types/recipe";
+import { RecipeDetailClient } from "@/components/RecipeDetailClient";
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
+async function getRecipeBySlug(slug: string): Promise<Recipe | null> {
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+  try {
+    const res = await fetch(`${baseUrl}/api/recipes?slug=${slug}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
 }
 
-export default async function RecipeDetailPage({ params }: PageProps) {
-  const { slug } = await params;
-  const recipe = getRecipeBySlug(slug);
+export default async function RecipeDetailPage({ params }: { params: { slug: string } }) {
+  const recipe = await getRecipeBySlug(params.slug);
 
-  // We don't notFound() here anymore because the recipe might exist in the user's localStorage (Redux)
-  // but not in the server's in-memory seed store.
-
-  // Allow chefs to preview draft recipes if found on server
-  if (recipe && !recipe.published) {
-    const cookieStore = await cookies();
-    const isChef = cookieStore.has("chef_token");
-    if (!isChef) {
-      notFound();
-    }
+  if (!recipe || !recipe.published) {
+    notFound();
   }
 
-  return <RecipeDetailClient slug={slug} initialRecipe={recipe} />;
+  return <RecipeDetailClient recipe={recipe} />;
 }

@@ -1,46 +1,31 @@
-import { useMemo } from "react";
-import { Recipe, Ingredient, Nutrition } from "@/types/recipe";
+import { useCooking } from "@/context/CookingContext";
+import { Ingredient, Nutrition, Recipe } from "@/types/recipe";
 
-interface ScaledResult {
+interface ScalerResult {
   scaledIngredients: Ingredient[];
   scaledServings: number;
-  scaledNutrition: Nutrition;
+  scaledNutrition: Nutrition | undefined;
 }
 
-export function useRecipeScaler(
-  recipe: Recipe | null,
-  multiplier: number,
-): ScaledResult {
-  return useMemo(() => {
-    if (!recipe) {
-      return {
-        scaledIngredients: [],
-        scaledServings: 0,
-        scaledNutrition: {
-          calories: 0,
-          proteinG: 0,
-          carbsG: 0,
-          fatG: 0,
-          fiberG: 0,
-        },
-      };
-    }
+export function useRecipeScaler(recipe: Recipe, multiplier: number): ScalerResult {
+  const { scaleIngredient } = useCooking();
 
-    const scaledIngredients: Ingredient[] = recipe.ingredients.map((ing) => ({
-      ...ing,
-      quantity: Math.round(ing.quantity * multiplier * 100) / 100,
-    }));
+  const scaledIngredients: Ingredient[] = recipe.ingredients.map((ing) => ({
+    ...ing,
+    quantity: scaleIngredient(ing.quantity),
+  }));
 
-    const scaledServings = Math.round(recipe.servings * multiplier * 100) / 100;
+  const scaledServings = recipe.servings * multiplier;
 
-    const scaledNutrition: Nutrition = {
-      calories: Math.round(recipe.nutrition.calories * multiplier),
-      proteinG: Math.round(recipe.nutrition.proteinG * multiplier * 10) / 10,
-      carbsG: Math.round(recipe.nutrition.carbsG * multiplier * 10) / 10,
-      fatG: Math.round(recipe.nutrition.fatG * multiplier * 10) / 10,
-      fiberG: Math.round(recipe.nutrition.fiberG * multiplier * 10) / 10,
-    };
+  const scaledNutrition: Nutrition | undefined = recipe.nutrition
+    ? {
+        calories: Math.round(recipe.nutrition.calories * multiplier * 100) / 100,
+        proteinG: Math.round(recipe.nutrition.proteinG * multiplier * 100) / 100,
+        carbsG: Math.round(recipe.nutrition.carbsG * multiplier * 100) / 100,
+        fatG: Math.round(recipe.nutrition.fatG * multiplier * 100) / 100,
+        fiberG: Math.round(recipe.nutrition.fiberG * multiplier * 100) / 100,
+      }
+    : undefined;
 
-    return { scaledIngredients, scaledServings, scaledNutrition };
-  }, [recipe, multiplier]);
+  return { scaledIngredients, scaledServings, scaledNutrition };
 }

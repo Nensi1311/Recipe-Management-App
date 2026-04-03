@@ -1,39 +1,25 @@
-// ── Enums / Union Types ──────────────────────────────────────
+export type DietaryTag =
+  | "vegan"
+  | "vegetarian"
+  | "gluten-free"
+  | "dairy-free"
+  | "keto"
+  | "paleo"
+  | "nut-free";
 
-export enum DietaryTag {
-  Vegan = "vegan",
-  Vegetarian = "vegetarian",
-  GlutenFree = "gluten-free",
-  DairyFree = "dairy-free",
-  Keto = "keto",
-  Paleo = "paleo",
-  NutFree = "nut-free",
-  LowCarb = "low-carb",
-}
+export type Difficulty = "easy" | "medium" | "hard";
 
-export enum Difficulty {
-  Easy = "easy",
-  Medium = "medium",
-  Hard = "hard",
-}
-
-export enum MeasurementUnit {
-  Gram = "g",
-  Kilogram = "kg",
-  Milliliter = "ml",
-  Liter = "l",
-  Teaspoon = "tsp",
-  Tablespoon = "tbsp",
-  Cup = "cup",
-  Ounce = "oz",
-  Pound = "lb",
-  FluidOunce = "fl oz",
-  Piece = "piece",
-  Pinch = "pinch",
-  Whole = "whole",
-}
-
-// ── Interfaces ───────────────────────────────────────────────
+export type MeasurementUnit =
+  | "g"
+  | "kg"
+  | "ml"
+  | "l"
+  | "tsp"
+  | "tbsp"
+  | "cup"
+  | "piece"
+  | "pinch"
+  | "to taste";
 
 export interface Ingredient {
   id: string;
@@ -46,8 +32,8 @@ export interface Ingredient {
 export interface RecipeStep {
   stepNumber: number;
   instruction: string;
-  durationMinutes: number;
-  tip: string;
+  durationMinutes?: number;
+  tip?: string;
 }
 
 export interface Nutrition {
@@ -63,7 +49,7 @@ export interface Recipe {
   title: string;
   slug: string;
   description: string;
-  coverImageUrl: string;
+  coverImageUrl?: string;
   authorId: string;
   category: string;
   dietaryTags: DietaryTag[];
@@ -73,7 +59,7 @@ export interface Recipe {
   cookTimeMinutes: number;
   ingredients: Ingredient[];
   steps: RecipeStep[];
-  nutrition: Nutrition;
+  nutrition?: Nutrition;
   published: boolean;
   rating: number;
   ratingCount: number;
@@ -84,7 +70,7 @@ export interface Recipe {
 export interface RecipeFilters {
   category: string;
   dietaryTags: DietaryTag[];
-  difficulty: string;
+  difficulty: Difficulty | "all";
   search: string;
   maxCookTime: number | null;
   published: boolean | null;

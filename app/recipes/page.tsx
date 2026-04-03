@@ -1,19 +1,19 @@
 import { Recipe } from "@/types/recipe";
-import RecipesClient from "./RecipesClient";
+import { RecipeBrowseClient } from "@/components/RecipeBrowseClient";
+
+async function getPublishedRecipes(): Promise<Recipe[]> {
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+  try {
+    const res = await fetch(`${baseUrl}/api/recipes?published=true`, { cache: "no-store" });
+    return res.json();
+  } catch {
+    return [];
+  }
+}
 
 export default async function RecipesPage() {
-  let recipes: Recipe[] = [];
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/recipes?published=true`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      recipes = await res.json();
-    }
-  } catch {
-    // Will use empty array, client will re-fetch
-  }
-
-  return <RecipesClient initialRecipes={recipes} />;
+  const recipes = await getPublishedRecipes();
+  return <RecipeBrowseClient initialRecipes={recipes} />;
 }

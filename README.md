@@ -1,64 +1,60 @@
-# RecipeMaster - Premium Recipe Management App
+# RecipeVault — Recipe Management App
 
-RecipeMaster is a high-end application for managing, scaling, and mastering recipes. Built with Next.js 15, TypeScript (Strict), Redux Toolkit, and Context API.
+A full-stack recipe management application built with Next.js 14+ App Router, TypeScript, Redux Toolkit, Context API, and Tailwind CSS.
 
-## 🚀 How to Run Locally
+## Stack
+- **Framework**: Next.js 14+ (App Router)
+- **Language**: TypeScript (strict, no `any`)
+- **State**: Redux Toolkit (recipes + cookbook slices)
+- **Context**: CookingContext (serving scaler, unit conversion, theme)
+- **Styling**: Tailwind CSS
+- **Deployment**: Vercel
 
-1.  **Install Dependencies**:
+## Features
+- Browse published recipes with filters (category, dietary tags, difficulty, search, max cook time)
+- Recipe detail page with live serving scaler, unit toggle (metric/imperial), per-step countdown timers
+- Save recipes to personal cookbook (localStorage persisted)
+- Create and edit recipes with dynamic ingredient/step editors including drag-to-reorder
+- Star rating system with running average
+- Dark/light theme toggle
+- Middleware protecting `/manage` routes (requires `chef_token` cookie)
 
-    ```bash
-    npm install
-    ```
+## Getting Started
 
-2.  **Run Development Server**:
-
-    ```bash
-    npm run dev
-    ```
-
-    Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-3.  **Login as Chef**:
-    To access the Management area (`/manage`), click the **"Login as Chef"** button in the navigation bar. This sets the required `chef_token` cookie for the middleware.
-
-## 📂 Folder Structure
-
-```text
-/
-├── app/                    # Next.js App Router
-│   ├── api/                # API Routes (CRUD & Ratings)
-│   ├── cookbook/           # User's saved recipes
-│   ├── manage/             # Management Dashboard (Protected)
-│   ├── recipes/            # Browse & Detail pages
-│   ├── layout.tsx          # Root layout with Providers
-│   └── globals.css         # Core Design System (Vanilla CSS)
-├── components/             # Reusable UI Components
-├── context/                # Context API (CookingContext)
-├── hooks/                  # Custom Hooks (Scaler, Form, Filters)
-├── lib/                    # Shared Utilities & DB (File-based)
-├── store/                  # Redux Toolkit (Slices & Store)
-├── types/                  # Strict TypeScript Type Definitions
-├── data/                   # JSON Storage for Recipe Data
-└── middleware.ts           # Route Protection & Logging
+```bash
+npm install
+npm run dev
 ```
 
-## ✨ Key Features
+Open [http://localhost:3000](http://localhost:3000)
 
-- **Interactive Cook Mode**: Real-time ingredient scaling and unit conversion (Metric/Imperial).
-- **Step Timers**: Built-in countdown timers for each recipe step with visual alerts.
-- **Smart Filters**: Complex filtering by category, difficulty, dietary tags, and cook time.
-- **Personal Cookbook**: Save and manage your favorite recipes with localStorage persistence.
-- **Management Suite**: Full CRUD interface with dynamic ingredient and step editors.
-- **Premium Aesthetics**: Modern, responsive design with dark mode support.
+## Accessing /manage
 
-## 🛠 Tech Stack
+The `/manage` routes are protected by middleware that checks for a `chef_token` cookie. To access manage pages in development, set this cookie in your browser:
 
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript (Strict Mode)
-- **State Management**: Redux Toolkit & Context API
-- **Styling**: Vanilla CSS (Custom Variable System)
-- **Icons**: Lucide React
-
+```js
+document.cookie = "chef_token=dev-token; path=/";
 ```
 
+## Folder Structure
+
 ```
+app/               # Next.js App Router pages
+  api/             # API routes
+  recipes/         # Browse + detail pages
+  cookbook/        # Saved recipes
+  manage/          # Create/edit/manage pages
+components/        # Reusable UI components
+context/           # CookingContext
+hooks/             # Custom hooks
+lib/               # Data store + utilities
+store/             # Redux slices
+types/             # TypeScript types
+```
+
+## API Routes
+
+- `GET /api/recipes` — list with filters
+- `POST /api/recipes` — create recipe
+- `GET/PUT/DELETE /api/recipes/[id]` — CRUD
+- `POST /api/recipes/[id]/rate` — submit rating

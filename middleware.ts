@@ -1,27 +1,21 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const chefToken = request.cookies.get("chef_token");
 
-  // Protect /manage routes
-  if (pathname.startsWith("/manage")) {
-    const token = request.cookies.get("chef_token");
+  console.log(`[Middleware] ${new Date().toISOString()} — ${pathname}`);
 
-    // Log path and timestamp
-    console.log(`[Middleware] ${new Date().toISOString()} - Path: ${pathname}`);
-
-    if (!token) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("error", "login_required");
-      return NextResponse.redirect(url);
-    }
+  if (!chefToken) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("from", pathname);
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/manage", "/manage/:path*"],
+  matcher: ["/manage/:path*"],
 };

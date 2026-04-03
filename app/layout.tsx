@@ -1,36 +1,24 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { StoreProvider } from "@/store/StoreProvider";
+import { ReduxProvider } from "@/lib/ReduxProvider";
 import { CookingProvider } from "@/context/CookingContext";
-import Navigation from "@/components/Navigation";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+import { Navbar } from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Recipe Management App",
-  description: "Discover, create and manage your favorite recipes.",
+  title: "RecipeVault — Your Personal Cookbook",
+  description: "Browse, save, and create beautiful recipes",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} font-sans antialiased bg-gray-950 text-white min-h-screen`}
-      >
-        <StoreProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-stone-50 dark:bg-stone-950 transition-colors duration-300">
+        <ReduxProvider>
           <CookingProvider>
-            <Navigation />
-            <main className="pt-16">{children}</main>
+            <Navbar />
+            <main>{children}</main>
           </CookingProvider>
-        </StoreProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

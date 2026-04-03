@@ -1,40 +1,42 @@
-import React from "react";
 import Link from "next/link";
-import { Settings, Plus, ChefHat } from "lucide-react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function ManageLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ManageLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = cookies();
+  const chefToken = cookieStore.get("chef_token");
+
+  if (!chefToken) {
+    redirect("/login?from=/manage");
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col lg:flex-row gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="flex gap-8">
         {/* Sidebar */}
-        <aside className="lg:w-64 shrink-0">
-          <div className="lg:sticky lg:top-24 p-4 rounded bg-gray-800 border border-gray-700 space-y-2">
-            <div className="flex items-center gap-2 px-3 py-2 mb-2">
-              <ChefHat size={20} className="text-purple-400" />
-              <span className="font-bold text-white">Chef Dashboard</span>
+        <aside className="w-56 flex-shrink-0 hidden md:block">
+          <nav className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 p-4 sticky top-24">
+            <h2 className="font-display font-bold text-stone-700 dark:text-stone-300 text-sm uppercase tracking-wide mb-4 px-2">
+              Manage
+            </h2>
+            <div className="space-y-1">
+              <Link
+                href="/manage"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-brand-600 transition-colors"
+              >
+                📋 My Recipes
+              </Link>
+              <Link
+                href="/manage/create"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 hover:text-brand-600 transition-colors"
+              >
+                ✨ Create Recipe
+              </Link>
             </div>
-            <Link
-              href="/manage"
-              className="flex items-center gap-2 px-3 py-2 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors text-sm font-medium"
-            >
-              <Settings size={16} />
-              My Recipes
-            </Link>
-            <Link
-              href="/manage/create"
-              className="flex items-center gap-2 px-3 py-2 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors text-sm font-medium"
-            >
-              <Plus size={16} />
-              Create Recipe
-            </Link>
-          </div>
+          </nav>
         </aside>
 
-        {/* Main Content */}
+        {/* Content */}
         <div className="flex-1">{children}</div>
       </div>
     </div>
